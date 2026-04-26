@@ -1,0 +1,22 @@
+{
+  "name": "Satoshi Genesis Token List",
+  "timestamp": "2026-04-26T11:20:00Z",
+  "tags": {},
+  "tokens": [
+    {
+      "chainId": 101,
+      "address": "DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF",
+      "symbol": "SGEN",
+      "name": "Satoshi Genesis",
+      "decimals": 8,
+      "logoURI": "https://satoshi-genesis-site.vercel.app/token/sgen-logo.svg",
+      "tags": ["token-2022"],
+      "extensions": {
+        "website": "https://satoshi-genesis-site.vercel.app/",
+        "documentation": "https://satoshi-genesis-site.vercel.app/downloads/whitepaper.pdf",
+        "tokenomics": "https://satoshi-genesis-site.vercel.app/downloads/tokenomics-graphic.pdf",
+        "meteoraPool": "https://app.meteora.ag/dlmm/AvWn3ppCNaLDDKfN2rwY2Mhs5m34zGvM5PD18j5jTbVu"
+      }
+    }
+  ]
+}
