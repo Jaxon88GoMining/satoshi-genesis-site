@@ -1,6 +1,7 @@
 import './globals.css';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { AppWalletProvider } from './providers';
 
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   description: 'A dual-token ecosystem built for activity and designed for value.',
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <body>
