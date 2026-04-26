@@ -1,0 +1,31 @@
+{
+  "name": "Satoshi Genesis",
+  "symbol": "SGEN",
+  "description": "Satoshi Genesis is the fixed-supply core asset of the Satoshi Genesis ecosystem.",
+  "image": "https://satoshi-genesis-site.vercel.app/token/sgen-logo.svg",
+  "external_url": "https://satoshi-genesis-site.vercel.app/",
+  "attributes": [
+    {
+      "trait_type": "Network",
+      "value": "Solana mainnet"
+    },
+    {
+      "trait_type": "Role",
+      "value": "Core ecosystem asset"
+    },
+    {
+      "trait_type": "Supply",
+      "value": "21000000"
+    },
+    {
+      "trait_type": "Decimals",
+      "value": 8
+    }
+  ],
+  "extensions": {
+    "website": "https://satoshi-genesis-site.vercel.app/",
+    "documentation": "https://satoshi-genesis-site.vercel.app/downloads/whitepaper.pdf",
+    "tokenomics": "https://satoshi-genesis-site.vercel.app/downloads/tokenomics-graphic.pdf",
+    "meteoraPool": "https://app.meteora.ag/dlmm/AvWn3ppCNaLDDKfN2rwY2Mhs5m34zGvM5PD18j5jTbVu"
+  }
+}
