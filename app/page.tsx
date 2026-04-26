@@ -277,6 +277,7 @@ export default function Page() {
               <a href="#tokens" className="nav-link">Tokens</a>
               <a href="#value-loop" className="nav-link">Value Loop</a>
               <a href="#roadmap" className="nav-link">Roadmap</a>
+              <a href="/bitcoin-layer" className="nav-link">Bitcoin Layer</a>
               <ButtonLink href={WHITEPAPER_URL} target="_blank">Read Whitepaper</ButtonLink>
             </nav>
           </div>
