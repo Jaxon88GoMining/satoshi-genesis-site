@@ -8,9 +8,9 @@ import {
   Bot,
   Clock3,
   FileText,
-  Home,
   Layers,
   LineChart,
+  Lock,
   Radar,
   ShieldCheck,
   Wallet,
@@ -36,36 +36,98 @@ const projectFacts = [
   ['Freeze authority', 'disabled'],
 ] as const;
 
-const watchtowerCards = [
+const accessTiers = [
   {
-    icon: Wallet,
-    title: 'Dormant wallet monitoring',
-    text: 'Track long-silent Bitcoin addresses and highlight reactivation events that matter to market structure and public-chain context.',
+    title: 'Free',
+    badge: 'Open access',
+    accent: 'rgba(255,255,255,0.10)',
+    features: [
+      'Public Bitcoin Layer overview',
+      'Basic Bitcoin education',
+      'Sample whale movement cards',
+      'Sample dormant wallet cards',
+    ],
   },
+  {
+    title: 'SGEN Holder',
+    badge: 'Mock holder gate',
+    accent: 'rgba(251,191,36,0.24)',
+    features: [
+      'Whale movement alerts',
+      'Dormant wallet watchlist',
+      'Ancient Bitcoin movement alerts',
+      'AI Bitcoin movement summaries',
+      'Holder-only reports',
+    ],
+  },
+  {
+    title: 'Watchtower Pro',
+    badge: 'Mock premium tier',
+    accent: 'rgba(249,115,22,0.26)',
+    features: [
+      'Exchange inflow/outflow signals',
+      'Miner flow tracking',
+      'Custom wallet watchlists',
+      'Priority alerts',
+      'Monthly Bitcoin intelligence report',
+      'Future API access',
+    ],
+  },
+] as const;
+
+const lockedFeatures = [
   {
     icon: BellRing,
-    title: 'Whale movement alerts',
-    text: 'Surface large public Bitcoin transfers that may signal treasury motion, custody changes, or meaningful holder behavior.',
+    title: 'Whale Alerts',
+    text: 'Follow oversized Bitcoin transfers with readable summaries and future alert logic for meaningful wallet movement.',
   },
   {
-    icon: Blocks,
-    title: 'Miner flow tracking',
-    text: 'Watch miner-linked wallet activity and public outflows to better understand supply pressure and distribution patterns.',
-  },
-  {
-    icon: LineChart,
-    title: 'Exchange inflow / outflow signals',
-    text: 'Monitor public exchange-facing Bitcoin flows to support a clearer read on potential liquidity, selling pressure, or accumulation.',
+    icon: Wallet,
+    title: 'Dormant Wallet Alerts',
+    text: 'Watch long-silent Bitcoin addresses and surface reactivation signals when historic holdings wake up on the public ledger.',
   },
   {
     icon: Clock3,
-    title: 'Ancient Bitcoin movement alerts',
-    text: 'Flag exceptionally old Bitcoin movement when legacy coins become active again on the public ledger.',
+    title: 'Ancient BTC Movement Alerts',
+    text: 'Highlight especially old Bitcoin movement so rare legacy activity can be reviewed in context instead of missed in noise.',
+  },
+  {
+    icon: LineChart,
+    title: 'Exchange Flow Signals',
+    text: 'Track public inflow and outflow patterns linked to exchange clusters for a cleaner read on pressure and positioning.',
+  },
+  {
+    icon: Blocks,
+    title: 'Miner Flow Tracker',
+    text: 'Monitor miner-linked wallet behavior and transfer patterns to better understand public supply-side movement.',
   },
   {
     icon: Bot,
-    title: 'AI-generated Bitcoin movement summaries',
-    text: 'Turn raw public-chain events into readable briefings that explain what moved, why it matters, and what deserves follow-up.',
+    title: 'AI Bitcoin Summary Engine',
+    text: 'Turn raw public-chain events into plain-language briefings that explain what moved, when it moved, and why it matters.',
+  },
+] as const;
+
+const sampleFeed = [
+  {
+    label: 'Ancient Wallet Activity',
+    title: '12.4 year dormant wallet moved 50 BTC',
+    text: 'Demo alert showing how long-silent public Bitcoin movement can be surfaced and summarised for users.',
+  },
+  {
+    label: 'Whale Transfer',
+    title: '1,250 BTC moved between unknown wallets',
+    text: 'Demo alert showing a large public transfer moving between two unidentified counterparties.',
+  },
+  {
+    label: 'Exchange Inflow Signal',
+    title: '340 BTC sent to major exchange cluster',
+    text: 'Demo alert showing a public exchange-facing movement event that could matter to liquidity interpretation.',
+  },
+  {
+    label: 'Miner Flow',
+    title: 'Mining wallet transferred 22 BTC',
+    text: 'Demo alert showing miner-linked public wallet movement for monitoring and future summary tools.',
   },
 ] as const;
 
@@ -117,6 +179,12 @@ type ButtonLinkProps = {
 };
 
 type InfoCardProps = {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  text: string;
+};
+
+type LockedCardProps = {
   icon: ComponentType<{ className?: string }>;
   title: string;
   text: string;
@@ -207,6 +275,29 @@ function InfoCard({ icon: Icon, title, text }: InfoCardProps) {
   );
 }
 
+function LockedFeatureCard({ icon: Icon, title, text }: LockedCardProps) {
+  return (
+    <div className="panel card" style={{ borderColor: 'rgba(251,191,36,0.18)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start' }}>
+        <div className="feature-icon">
+          <Icon className="icon" />
+        </div>
+        <div className="token-badge" style={{ color: '#fde68a', borderColor: 'rgba(251,191,36,0.20)' }}>
+          <Lock className="inline-icon" /> Locked
+        </div>
+      </div>
+      <div className="feature-title" style={{ marginTop: '0.4rem' }}>{title}</div>
+      <p className="section-copy">{text}</p>
+      <div className="token-item" style={{ marginTop: '1rem', justifyContent: 'center', color: '#fde68a' }}>
+        Locked — SGEN Holder / Pro Access
+      </div>
+      <div style={{ marginTop: '1rem' }}>
+        <ButtonLink href="#access" variant="outline">Unlock Access</ButtonLink>
+      </div>
+    </div>
+  );
+}
+
 export default function BitcoinLayerPage() {
   return (
     <div className="page">
@@ -229,8 +320,9 @@ export default function BitcoinLayerPage() {
             <nav className="nav">
               <a href={HOME_URL} className="nav-link">Home</a>
               <a href="/bitcoin-layer" className="nav-link" style={{ color: '#fde68a' }}>Bitcoin Layer</a>
-              <a href="#watchtower" className="nav-link">Watchtower</a>
-              <a href="#proof" className="nav-link">Genesis Proof</a>
+              <a href="#access" className="nav-link">Access</a>
+              <a href="#locked" className="nav-link">Locked Tools</a>
+              <a href="#feed" className="nav-link">Demo Feed</a>
               <ButtonLink href={WHITEPAPER_URL} target="_blank">Read Whitepaper</ButtonLink>
             </nav>
           </div>
@@ -269,8 +361,8 @@ export default function BitcoinLayerPage() {
                     <div className="metric-label">Historical proof anchor</div>
                   </div>
                   <div className="panel metric">
-                    <div className="metric-value">OP_RETURN / Ordinal</div>
-                    <div className="metric-label">Planned proof record path</div>
+                    <div className="metric-value">Mock Access</div>
+                    <div className="metric-label">Phase 2 Watchtower monetisation layout</div>
                   </div>
                 </div>
               </div>
@@ -337,30 +429,77 @@ export default function BitcoinLayerPage() {
             </div>
           </Section>
 
-          <Section id="watchtower" eyebrow="Bitcoin Watchtower" title="Public Bitcoin monitoring tools designed for future intelligence dashboards.">
+          <Section id="access" eyebrow="Bitcoin Watchtower Access" title="A front-end access model for Bitcoin intelligence, alerts, and future holder tools.">
             <p className="section-copy">
-              The Bitcoin Watchtower is where Satoshi Genesis can surface public-chain monitoring, entity watchlists, and readable summaries built around Bitcoin movement. Live data will be added in a future version.
+              This Phase 2 layout is a product access mockup only. It shows how Bitcoin Watchtower features can be structured for open users, SGEN holders, and a future premium tier. Live data will be added in a future version.
             </p>
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '1rem',
                 marginTop: '2.5rem',
               }}
             >
-              {watchtowerCards.map((card) => (
-                <InfoCard key={card.title} {...card} />
+              {accessTiers.map((tier) => (
+                <div key={tier.title} className="panel card" style={{ borderColor: tier.accent }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+                    <div className="card-title">{tier.title}</div>
+                    <div className="token-badge" style={{ borderColor: tier.accent, color: '#fde68a' }}>{tier.badge}</div>
+                  </div>
+                  <div className="token-list">
+                    {tier.features.map((feature) => (
+                      <div key={feature} className="token-item">
+                        <ArrowRight className="inline-icon" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
-            <div className="panel card" style={{ marginTop: '1.5rem', borderColor: 'rgba(251,191,36,0.25)' }}>
-              <div className="logo-inline">
-                <Radar className="icon large" style={{ color: '#fde68a' }} />
-                <div className="card-title">Future data layer</div>
-              </div>
+          </Section>
+
+          <Section id="locked" eyebrow="Locked Feature Cards" title="Premium Watchtower modules shown as SGEN-gated and Pro-gated product mockups.">
+            <p className="section-copy">
+              These cards are front-end previews of future access-controlled tools. They do not process payments or unlock live feeds yet. They simply show how gated Watchtower modules could be presented.
+            </p>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '1rem',
+                marginTop: '2.5rem',
+              }}
+            >
+              {lockedFeatures.map((feature) => (
+                <LockedFeatureCard key={feature.title} {...feature} />
+              ))}
+            </div>
+          </Section>
+
+          <Section id="feed" eyebrow="Sample Alert Feed" title="Demo movement cards showing how Watchtower alerts can look before live data is connected.">
+            <div className="panel card" style={{ borderColor: 'rgba(251,191,36,0.25)' }}>
+              <div className="eyebrow">Demo data — live tracking coming soon</div>
               <p className="section-copy" style={{ marginTop: '0.9rem' }}>
-                Initial release focuses on structure, intent, and product direction. Real-time public-chain feeds, dashboards, and alert logic will be added in a future version of the Bitcoin Layer.
+                These cards use fake example events for layout and product design only. They do not represent live Bitcoin monitoring or real-time market intelligence yet.
               </p>
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '1rem',
+                marginTop: '1.5rem',
+              }}
+            >
+              {sampleFeed.map((item) => (
+                <div key={item.title} className="panel card">
+                  <div className="eyebrow">{item.label}</div>
+                  <div className="card-title" style={{ marginTop: '0.85rem' }}>{item.title}</div>
+                  <p className="section-copy" style={{ marginTop: '0.85rem' }}>{item.text}</p>
+                </div>
+              ))}
             </div>
           </Section>
 
@@ -415,6 +554,9 @@ export default function BitcoinLayerPage() {
               <p className="section-copy" style={{ marginTop: '1rem' }}>
                 Satoshi Genesis does not hack wallets, brute-force private keys, or promise recovery of Bitcoin that users do not control. The Bitcoin Layer is for public blockchain intelligence, proof anchoring, education, and transparent monitoring only.
               </p>
+              <p className="section-copy" style={{ marginTop: '1rem' }}>
+                The Watchtower monitors public blockchain data only. It does not access private wallets, recover lost Bitcoin, brute-force keys, or provide financial advice.
+              </p>
             </div>
           </Section>
 
@@ -423,18 +565,18 @@ export default function BitcoinLayerPage() {
               <div className="panel cta-panel">
                 <div className="cta-row">
                   <div>
-                    <div className="eyebrow">Call to Action</div>
+                    <div className="eyebrow">Monetisation CTA</div>
                     <h2 className="section-title" style={{ marginTop: '1rem' }}>
-                      Explore SGEN, track the Bitcoin Layer roadmap, and return to the main site anytime.
+                      Unlock the Satoshi Genesis Bitcoin Watchtower
                     </h2>
                     <p className="section-copy">
-                      This page frames Satoshi Genesis as a Solana-native ecosystem that reads Bitcoin publicly, explains Bitcoin movement clearly, and prepares a permanent Bitcoin-side proof record for launch identity.
+                      Hold SGEN or upgrade to Watchtower Pro to access advanced Bitcoin movement intelligence, alert feeds, watchlists, and reports.
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <ButtonLink href={TOKEN_URL} target="_blank" variant="gold">View SGEN Token</ButtonLink>
-                    <ButtonLink href={WHITEPAPER_URL} target="_blank">Read Whitepaper</ButtonLink>
-                    <ButtonLink href={HOME_URL} variant="outline">Return Home</ButtonLink>
+                    <ButtonLink href={TOKEN_URL} target="_blank" variant="gold">Get SGEN Access</ButtonLink>
+                    <ButtonLink href="#access">Join Watchtower Pro</ButtonLink>
+                    <ButtonLink href={HOME_URL} variant="outline">Back to Home</ButtonLink>
                   </div>
                 </div>
               </div>
@@ -457,7 +599,7 @@ export default function BitcoinLayerPage() {
               </div>
             </div>
             <div className="footer-note">
-              SGEN is a Solana mainnet token. The Bitcoin Layer is a monitoring and proof framework built around public blockchain data, future dashboards, and permanent proof anchoring records.
+              SGEN is a Solana mainnet token. The Bitcoin Layer is a monitoring and proof framework built around public blockchain data, future dashboards, product access mockups, and permanent proof anchoring records.
             </div>
           </div>
         </footer>
