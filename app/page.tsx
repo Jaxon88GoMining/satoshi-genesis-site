@@ -277,7 +277,7 @@ export default function Page() {
               <a href="#tokens" className="nav-link">Tokens</a>
               <a href="#value-loop" className="nav-link">Value Loop</a>
               <a href="#roadmap" className="nav-link">Roadmap</a>
-              <a href="/bitcoin-layer" className="nav-link">Bitcoin Layer</a>
+              <a href="/watchtower" className="nav-link">Bitcoin Layer</a>
               <ButtonLink href={WHITEPAPER_URL} target="_blank">Read Whitepaper</ButtonLink>
             </nav>
           </div>
@@ -370,7 +370,7 @@ export default function Page() {
                   </p>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <ButtonLink href="/bitcoin-layer" variant="gold">Explore Bitcoin Layer</ButtonLink>
+                  <ButtonLink href="/watchtower" variant="gold">Explore Bitcoin Layer</ButtonLink>
                 </div>
               </div>
             </motion.div>
