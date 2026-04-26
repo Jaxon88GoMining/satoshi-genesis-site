@@ -10,11 +10,12 @@ const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 const SGEN_DECIMALS = 8;
 const mintPublicKey = new PublicKey(SGEN_MINT);
 
-function formatTokenAmount(rawAmount: bigint, decimals: number) {
-  const divisor = 10n ** BigInt(decimals);
-  const whole = rawAmount / divisor;
-  const fraction = (rawAmount % divisor).toString().padStart(decimals, '0').replace(/0+$/, '');
-  return fraction ? `${whole.toString()}.${fraction}` : whole.toString();
+function formatTokenAmount(rawAmount: number, decimals: number) {
+  const divisor = 10 ** decimals;
+  return (rawAmount / divisor).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  });
 }
 
 export default function HolderAccessPanel() {
@@ -22,7 +23,7 @@ export default function HolderAccessPanel() {
   const { publicKey, wallet, connected, connecting, connect } = useWallet();
   const { setVisible } = useWalletModal();
   const [panelOpen, setPanelOpen] = useState(false);
-  const [balanceRaw, setBalanceRaw] = useState<bigint | null>(null);
+  const [balanceRaw, setBalanceRaw] = useState<number | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dashboardMessage, setDashboardMessage] = useState<string | null>(null);
@@ -45,13 +46,13 @@ export default function HolderAccessPanel() {
       const total = response.value.reduce((sum, accountInfo) => {
         const data = accountInfo.account.data as ParsedAccountData;
         const amount = data.parsed.info.tokenAmount.amount as string;
-        return sum + BigInt(amount);
-      }, 0n);
+        return sum + Number.parseInt(amount, 10);
+      }, 0);
 
       setBalanceRaw(total);
     } catch (balanceError) {
       console.error(balanceError);
-      setBalanceRaw(0n);
+      setBalanceRaw(0);
       setError('Unable to verify SGEN balance right now.');
     } finally {
       setIsChecking(false);
@@ -79,7 +80,7 @@ export default function HolderAccessPanel() {
     setDashboardMessage(null);
   }, [connected, publicKey, checkBalance]);
 
-  const hasHolderAccess = useMemo(() => (balanceRaw ?? 0n) > 0n, [balanceRaw]);
+  const hasHolderAccess = useMemo(() => (balanceRaw ?? 0) > 0, [balanceRaw]);
   const walletAddress = publicKey?.toBase58() ?? 'Wallet not connected';
   const balanceLabel =
     connected && publicKey
