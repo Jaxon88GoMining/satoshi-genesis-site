@@ -354,6 +354,28 @@ export default function Page() {
             </div>
           </Section>
 
+          <Section id="bitcoin-watchtower" eyebrow="Bitcoin Watchtower" title="A premium Bitcoin monitoring layer designed to expand the SGEN ecosystem.">
+            <p className="section-copy">
+              Monitor Bitcoin movement, dormant wallets, whale transfers, and future SGEN-gated intelligence tools.
+            </p>
+            <motion.div {...fadeUp} className="panel cta-panel" style={{ marginTop: '2rem' }}>
+              <div className="cta-row">
+                <div>
+                  <div className="logo-inline">
+                    <Layers className="icon large" style={{ color: '#fde68a' }} />
+                    <div className="card-title">Bitcoin Watchtower</div>
+                  </div>
+                  <p className="section-copy" style={{ marginTop: '1rem' }}>
+                    Explore the front-end product vision for Bitcoin movement alerts, dormant wallet watchlists, demo feed cards, and future holder-only intelligence access through SGEN.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <ButtonLink href="/bitcoin-layer" variant="gold">Explore Bitcoin Layer</ButtonLink>
+                </div>
+              </div>
+            </motion.div>
+          </Section>
+
           <Section id="tokens" eyebrow="Token architecture" title="Two tokens. Clear jobs. Better balance.">
             <p className="section-copy">
               SGEN captures the long-term value layer. SFUEL handles ecosystem movement. That split allows activity to happen without constantly dragging on the core asset.
