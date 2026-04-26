@@ -23,7 +23,7 @@ export default function HolderAccessPanel() {
   const { connection } = useConnection();
   const { publicKey, wallet, connected, connecting, connect } = useWallet();
   const { setVisible } = useWalletModal();
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [balanceUiAmount, setBalanceUiAmount] = useState<number | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export default function HolderAccessPanel() {
 
     try {
       const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
-        mint: new PublicKey(SGEN_MINT),
+        mint: mintPublicKey,
       });
 
       console.log('[SGEN access] token accounts found', response.value.length);
@@ -149,7 +149,7 @@ export default function HolderAccessPanel() {
       <button type="button" className="button button-gold" onClick={handleConnectWallet}>
         Connect Wallet
       </button>
-      <button type="button" className="button button-outline" onClick={() => setPanelOpen((current) => !current)}>
+      <button type="button" className="button button-outline" onClick={() => setPanelOpen(true)}>
         Get SGEN Access
       </button>
       {panelOpen ? (
