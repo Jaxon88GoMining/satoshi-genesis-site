@@ -94,8 +94,8 @@ const faq = [
     a: 'SFUEL is the utility and reward token used for participation, upgrades, access, activity, and burn-linked ecosystem flow.',
   },
   {
-    q: 'What chain is the project designed for?',
-    a: 'The current working build assumption is an EVM-compatible deployment, with Base as the preferred first path for a clean launch setup.',
+    q: 'What chain is SGEN live on?',
+    a: 'SGEN is live on Solana mainnet as a Token-2022 asset, with public liquidity currently routed through Meteora.',
   },
 ];
 
@@ -310,7 +310,7 @@ export default function Page() {
                 <div className="stats-grid">
                   <Metric value="21M" label="Fixed SGEN supply" />
                   <Metric value="2.1B" label="Programmed SFUEL emission ceiling" />
-                  <Metric value="Base" label="Preferred working chain path" />
+                  <Metric value="Solana" label="Live network" />
                 </div>
               </motion.div>
 
