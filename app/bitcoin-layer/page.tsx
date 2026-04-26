@@ -255,7 +255,7 @@ function ButtonLink({ href, children, variant = 'primary', target }: ButtonLinkP
 
 function Section({ id, eyebrow, title, children }: SectionProps) {
   return (
-    <section id={id} className="section">
+    <section id="section" className="section">
       <div className="container">
         {eyebrow ? <div className="eyebrow">{eyebrow}</div> : null}
         <h2 className="section-title">{title}</h2>
@@ -321,7 +321,7 @@ export default function BitcoinLayerPage() {
             </div>
             <nav className="nav">
               <a href={HOME_URL} className="nav-link">Home</a>
-              <a href="/bitcoin-layer" className="nav-link" style={{ color: '#fde68a' }}>Bitcoin Layer</a>
+              <a href="/watchtower" className="nav-link" style={{ color: '#fde68a' }}>Bitcoin Layer</a>
               <a href="#access" className="nav-link">Access</a>
               <a href="#locked" className="nav-link">Locked Tools</a>
               <a href="#feed" className="nav-link">Demo Feed</a>
