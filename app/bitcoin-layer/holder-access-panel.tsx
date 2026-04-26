@@ -8,12 +8,31 @@ import { ParsedAccountData, PublicKey } from '@solana/web3.js';
 
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 const SGEN_DECIMALS = 8;
-const SOLANA_NETWORK_LABEL = 'Solana mainnet-beta';
-const mintPublicKey = new PublicKey(SGEN_MINT);
+const SOLANA_NETWORK_LABEL = 'mainnet-beta';
+const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
 const balanceFormatter = new Intl.NumberFormat(undefined, {
   minimumFractionDigits: 0,
   maximumFractionDigits: SGEN_DECIMALS,
 });
+
+type CheckStatus = 'idle' | 'checking' | 'success' | 'error';
+
+type DebugState = {
+  network: string;
+  tokenAccountsFound: number;
+  matchingSgenAccounts: number;
+  detectedSgenBalance: number;
+  lastCheckStatus: CheckStatus;
+};
+
+const defaultDebugState: DebugState = {
+  network: SOLANA_NETWORK_LABEL,
+  tokenAccountsFound: 0,
+  matchingSgenAccounts: 0,
+  detectedSgenBalance: 0,
+  lastCheckStatus: 'idle',
+};
 
 function formatTokenAmount(amount: number) {
   return balanceFormatter.format(amount);
@@ -28,48 +47,85 @@ export default function HolderAccessPanel() {
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dashboardMessage, setDashboardMessage] = useState<string | null>(null);
+  const [debugState, setDebugState] = useState<DebugState>(defaultDebugState);
 
   const checkBalance = useCallback(async () => {
     if (!publicKey) {
       setBalanceUiAmount(null);
       setError(null);
+      setDebugState(defaultDebugState);
       return;
     }
 
     setIsChecking(true);
     setError(null);
+    setDebugState((current) => ({ ...current, lastCheckStatus: 'checking' }));
 
+    console.log('[SGEN access] network', SOLANA_NETWORK_LABEL);
     console.log('[SGEN access] connected wallet address', publicKey.toBase58());
 
     try {
-      const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
-        mint: mintPublicKey,
-      });
+      const [tokenProgramAccounts, token2022Accounts] = await Promise.all([
+        connection.getParsedTokenAccountsByOwner(publicKey, {
+          programId: TOKEN_PROGRAM_ID,
+        }),
+        connection.getParsedTokenAccountsByOwner(publicKey, {
+          programId: TOKEN_2022_PROGRAM_ID,
+        }),
+      ]);
 
-      console.log('[SGEN access] token accounts found', response.value.length);
+      const allAccounts = [...tokenProgramAccounts.value, ...token2022Accounts.value];
+      console.log('[SGEN access] token accounts found', allAccounts.length);
 
-      const total = response.value.reduce((sum, accountInfo, index) => {
+      const matchingAccounts = allAccounts.filter((accountInfo) => {
         const accountData = accountInfo.account.data;
 
         if (typeof accountData !== 'object' || !('parsed' in accountData)) {
-          return sum;
+          return false;
         }
 
-        const tokenAmount = (accountData as ParsedAccountData).parsed.info.tokenAmount as {
-          uiAmount: number | null;
+        const parsedData = (accountData as ParsedAccountData).parsed.info as {
+          mint?: string;
         };
 
-        console.log('[SGEN access] raw tokenAmount', index, tokenAmount);
+        return parsedData.mint === SGEN_MINT;
+      });
 
-        return sum + (tokenAmount.uiAmount ?? 0);
+      console.log('[SGEN access] matching SGEN accounts', matchingAccounts.length);
+
+      const total = matchingAccounts.reduce((sum, accountInfo, index) => {
+        const accountData = accountInfo.account.data as ParsedAccountData;
+        const parsedInfo = accountData.parsed.info as {
+          tokenAmount?: {
+            uiAmount?: number | null;
+          };
+        };
+        const uiAmount = parsedInfo.tokenAmount?.uiAmount ?? 0;
+
+        console.log('[SGEN access] raw tokenAmount.uiAmount', index, uiAmount);
+
+        return sum + uiAmount;
       }, 0);
 
       console.log('[SGEN access] total SGEN balance', total);
+
       setBalanceUiAmount(total);
+      setDebugState({
+        network: SOLANA_NETWORK_LABEL,
+        tokenAccountsFound: allAccounts.length,
+        matchingSgenAccounts: matchingAccounts.length,
+        detectedSgenBalance: total,
+        lastCheckStatus: 'success',
+      });
     } catch (balanceError) {
       console.error('[SGEN access] balance check failed', balanceError);
       setBalanceUiAmount(null);
       setError('Unable to verify SGEN balance.');
+      setDebugState((current) => ({
+        ...current,
+        network: SOLANA_NETWORK_LABEL,
+        lastCheckStatus: 'error',
+      }));
     } finally {
       setIsChecking(false);
     }
@@ -94,6 +150,7 @@ export default function HolderAccessPanel() {
     setBalanceUiAmount(null);
     setError(null);
     setDashboardMessage(null);
+    setDebugState(defaultDebugState);
   }, [connected, publicKey, checkBalance]);
 
   const hasHolderAccess = useMemo(() => (balanceUiAmount ?? 0) > 0, [balanceUiAmount]);
@@ -197,6 +254,34 @@ export default function HolderAccessPanel() {
                 Access status
               </span>
               <strong>Access: {accessLabel}</strong>
+            </div>
+          </div>
+          <div className="panel-soft" style={{ padding: '1rem', marginTop: '1rem' }}>
+            <div className="logo-inline">
+              <ShieldCheck className="icon" style={{ color: '#fde68a' }} />
+              <div className="card-title" style={{ fontSize: '1rem' }}>Temporary debug state</div>
+            </div>
+            <div className="token-list" style={{ marginTop: '0.85rem' }}>
+              <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Network</span>
+                <strong>{debugState.network}</strong>
+              </div>
+              <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Token accounts found</span>
+                <strong>{debugState.tokenAccountsFound}</strong>
+              </div>
+              <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Matching SGEN accounts</span>
+                <strong>{debugState.matchingSgenAccounts}</strong>
+              </div>
+              <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Detected SGEN balance</span>
+                <strong>{formatTokenAmount(debugState.detectedSgenBalance)}</strong>
+              </div>
+              <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Last check status</span>
+                <strong>{debugState.lastCheckStatus}</strong>
+              </div>
             </div>
           </div>
           {wallet?.adapter?.name ? (
