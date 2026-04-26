@@ -255,7 +255,7 @@ function ButtonLink({ href, children, variant = 'primary', target }: ButtonLinkP
 
 function Section({ id, eyebrow, title, children }: SectionProps) {
   return (
-    <section id="section" className="section">
+    <section id={id} className="section">
       <div className="container">
         {eyebrow ? <div className="eyebrow">{eyebrow}</div> : null}
         <h2 className="section-title">{title}</h2>
