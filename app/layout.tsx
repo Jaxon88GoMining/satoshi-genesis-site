@@ -1,5 +1,7 @@
 import './globals.css';
+import '@solana/wallet-adapter-react-ui/styles.css';
 import type { Metadata } from 'next';
+import { AppWalletProvider } from './providers';
 
 export const metadata: Metadata = {
   title: 'Satoshi Genesis',
@@ -9,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppWalletProvider>{children}</AppWalletProvider>
+      </body>
     </html>
   );
 }
