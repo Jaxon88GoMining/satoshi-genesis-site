@@ -8,14 +8,15 @@ import { ParsedAccountData, PublicKey } from '@solana/web3.js';
 
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 const SGEN_DECIMALS = 8;
+const SOLANA_NETWORK_LABEL = 'Solana mainnet-beta';
 const mintPublicKey = new PublicKey(SGEN_MINT);
+const balanceFormatter = new Intl.NumberFormat(undefined, {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: SGEN_DECIMALS,
+});
 
-function formatTokenAmount(rawAmount: number, decimals: number) {
-  const divisor = 10 ** decimals;
-  return (rawAmount / divisor).toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: decimals,
-  });
+function formatTokenAmount(amount: number) {
+  return balanceFormatter.format(amount);
 }
 
 export default function HolderAccessPanel() {
@@ -23,14 +24,14 @@ export default function HolderAccessPanel() {
   const { publicKey, wallet, connected, connecting, connect } = useWallet();
   const { setVisible } = useWalletModal();
   const [panelOpen, setPanelOpen] = useState(false);
-  const [balanceRaw, setBalanceRaw] = useState<number | null>(null);
+  const [balanceUiAmount, setBalanceUiAmount] = useState<number | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dashboardMessage, setDashboardMessage] = useState<string | null>(null);
 
   const checkBalance = useCallback(async () => {
     if (!publicKey) {
-      setBalanceRaw(null);
+      setBalanceUiAmount(null);
       setError(null);
       return;
     }
@@ -38,22 +39,37 @@ export default function HolderAccessPanel() {
     setIsChecking(true);
     setError(null);
 
+    console.log('[SGEN access] connected wallet address', publicKey.toBase58());
+
     try {
       const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
-        mint: mintPublicKey,
+        mint: new PublicKey(SGEN_MINT),
       });
 
-      const total = response.value.reduce((sum, accountInfo) => {
-        const data = accountInfo.account.data as ParsedAccountData;
-        const amount = data.parsed.info.tokenAmount.amount as string;
-        return sum + Number.parseInt(amount, 10);
+      console.log('[SGEN access] token accounts found', response.value.length);
+
+      const total = response.value.reduce((sum, accountInfo, index) => {
+        const accountData = accountInfo.account.data;
+
+        if (typeof accountData !== 'object' || !('parsed' in accountData)) {
+          return sum;
+        }
+
+        const tokenAmount = (accountData as ParsedAccountData).parsed.info.tokenAmount as {
+          uiAmount: number | null;
+        };
+
+        console.log('[SGEN access] raw tokenAmount', index, tokenAmount);
+
+        return sum + (tokenAmount.uiAmount ?? 0);
       }, 0);
 
-      setBalanceRaw(total);
+      console.log('[SGEN access] total SGEN balance', total);
+      setBalanceUiAmount(total);
     } catch (balanceError) {
-      console.error(balanceError);
-      setBalanceRaw(0);
-      setError('Unable to verify SGEN balance right now.');
+      console.error('[SGEN access] balance check failed', balanceError);
+      setBalanceUiAmount(null);
+      setError('Unable to verify SGEN balance.');
     } finally {
       setIsChecking(false);
     }
@@ -75,28 +91,30 @@ export default function HolderAccessPanel() {
       return;
     }
 
-    setBalanceRaw(null);
+    setBalanceUiAmount(null);
     setError(null);
     setDashboardMessage(null);
   }, [connected, publicKey, checkBalance]);
 
-  const hasHolderAccess = useMemo(() => (balanceRaw ?? 0) > 0, [balanceRaw]);
+  const hasHolderAccess = useMemo(() => (balanceUiAmount ?? 0) > 0, [balanceUiAmount]);
   const walletAddress = publicKey?.toBase58() ?? 'Wallet not connected';
   const balanceLabel =
     connected && publicKey
       ? isChecking
         ? 'Checking...'
-        : balanceRaw === null
+        : balanceUiAmount === null
           ? 'Not checked'
-          : formatTokenAmount(balanceRaw, SGEN_DECIMALS)
+          : formatTokenAmount(balanceUiAmount)
       : 'Not checked';
   const accessLabel =
     connected && publicKey
       ? isChecking
         ? 'Checking SGEN balance...'
-        : hasHolderAccess
-          ? 'Unlocked — SGEN Holder'
-          : 'Locked — SGEN required'
+        : balanceUiAmount !== null
+          ? hasHolderAccess
+            ? 'Unlocked — SGEN Holder'
+            : 'Locked — SGEN required'
+          : 'Balance check unavailable'
       : 'Locked — SGEN required';
 
   const handleConnectWallet = useCallback(async () => {
@@ -149,6 +167,12 @@ export default function HolderAccessPanel() {
                 Supported wallets
               </span>
               <strong>Solflare, Phantom</strong>
+            </div>
+            <div className="token-item" style={{ flexDirection: 'column', gap: '0.35rem' }}>
+              <span style={{ color: '#fde68a', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.16em' }}>
+                Network
+              </span>
+              <strong>{SOLANA_NETWORK_LABEL}</strong>
             </div>
             <div className="token-item" style={{ flexDirection: 'column', gap: '0.35rem' }}>
               <span style={{ color: '#fde68a', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.16em' }}>
