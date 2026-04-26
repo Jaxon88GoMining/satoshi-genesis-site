@@ -16,6 +16,7 @@ import {
 const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const DECK_URL = '/downloads/pitch-deck.pptx';
 const TOKENOMICS_URL = '/downloads/tokenomics-graphic.pdf';
+const METEORA_POOL_URL = 'https://app.meteora.ag/dlmm/AvWn3ppCNaLDDKfN2rwY2Mhs5m34zGvM5PD18j5jTbVu';
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -299,6 +300,9 @@ export default function Page() {
                   <ButtonLink href="#tokenomics">
                     Explore the Ecosystem <ArrowRight className="icon" />
                   </ButtonLink>
+                  <ButtonLink href={METEORA_POOL_URL} target="_blank" variant="gold">
+                    Open SGEN-SOL on Meteora
+                  </ButtonLink>
                   <ButtonLink href={TOKENOMICS_URL} target="_blank" variant="outline">
                     View Token Design
                   </ButtonLink>
@@ -494,6 +498,7 @@ export default function Page() {
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <ButtonLink href={METEORA_POOL_URL} target="_blank" variant="gold">Open Meteora Pool</ButtonLink>
                     <ButtonLink href={WHITEPAPER_URL} target="_blank">Read the Whitepaper</ButtonLink>
                     <ButtonLink href={DECK_URL} target="_blank" variant="outline">View the Deck</ButtonLink>
                   </div>
@@ -505,6 +510,7 @@ export default function Page() {
 
         <footer style={{ borderTop: '1px solid rgba(255,255,255,0.10)', background: 'rgba(0,0,0,0.20)' }}>
           <div className="container footer-links">
+            <ButtonLink href={METEORA_POOL_URL} target="_blank" variant="outline">Open Meteora Pool</ButtonLink>
             <ButtonLink href={WHITEPAPER_URL} target="_blank" variant="outline">Whitepaper PDF</ButtonLink>
             <ButtonLink href={DECK_URL} target="_blank" variant="outline">Pitch Deck</ButtonLink>
             <ButtonLink href={TOKENOMICS_URL} target="_blank" variant="outline">Tokenomics Graphic</ButtonLink>
