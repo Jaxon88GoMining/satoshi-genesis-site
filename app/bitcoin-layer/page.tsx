@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Wallet,
 } from 'lucide-react';
+import HolderAccessPanel from './holder-access-panel';
 
 export const metadata: Metadata = {
   title: 'Satoshi Genesis Bitcoin Layer',
@@ -51,7 +52,7 @@ const accessTiers = [
   },
   {
     title: 'SGEN Holder',
-    badge: 'Mock holder gate',
+    badge: 'Live holder check',
     accent: 'rgba(251,191,36,0.24)',
     features: [
       'Whale movement alerts',
@@ -191,11 +192,6 @@ type LockedCardProps = {
   text: string;
 };
 
-type MockWalletButtonProps = {
-  children: ReactNode;
-  variant?: 'outline' | 'gold';
-};
-
 function SatoshiGenesisLogo({ size = 48, wordmark = false }: { size?: number; wordmark?: boolean }) {
   return (
     <div className={`logo-inline ${wordmark ? '' : 'centered'}`}>
@@ -298,22 +294,9 @@ function LockedFeatureCard({ icon: Icon, title, text }: LockedCardProps) {
         Locked — SGEN Holder / Pro Access
       </div>
       <div style={{ marginTop: '1rem' }}>
-        <ButtonLink href="#holder-access-panel" variant="outline">Unlock Access</ButtonLink>
+        <ButtonLink href="#holder-access-cta" variant="outline">Unlock Access</ButtonLink>
       </div>
     </div>
-  );
-}
-
-function MockWalletButton({ children, variant = 'outline' }: MockWalletButtonProps) {
-  return (
-    <button
-      type="button"
-      disabled
-      className={variant === 'gold' ? 'button button-gold' : 'button button-outline'}
-      style={{ width: '100%', opacity: 0.72, cursor: 'not-allowed' }}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -380,8 +363,8 @@ export default function BitcoinLayerPage() {
                     <div className="metric-label">Historical proof anchor</div>
                   </div>
                   <div className="panel metric">
-                    <div className="metric-value">Mock Access</div>
-                    <div className="metric-label">Phase 3 holder access preview</div>
+                    <div className="metric-value">Live Holder Check</div>
+                    <div className="metric-label">Wallet connection and SGEN balance verification</div>
                   </div>
                 </div>
               </div>
@@ -450,7 +433,7 @@ export default function BitcoinLayerPage() {
 
           <Section id="access" eyebrow="Bitcoin Watchtower Access" title="A front-end access model for Bitcoin intelligence, alerts, and future holder tools.">
             <p className="section-copy">
-              This Phase 2 layout is a product access mockup only. It shows how Bitcoin Watchtower features can be structured for open users, SGEN holders, and a future premium tier. Live data will be added in a future version.
+              This Phase 4 layout combines the access mockup with a real Solana wallet connection and SGEN balance check. Live Bitcoin movement feeds will still be added in a future version.
             </p>
             <div
               style={{
@@ -481,7 +464,7 @@ export default function BitcoinLayerPage() {
 
           <Section id="locked" eyebrow="Locked Feature Cards" title="Premium Watchtower modules shown as SGEN-gated and Pro-gated product mockups.">
             <p className="section-copy">
-              These cards are front-end previews of future access-controlled tools. They do not process payments or unlock live feeds yet. They simply show how gated Watchtower modules could be presented.
+              These cards preview future gated Watchtower modules. The holder gate now performs a live SGEN balance check, while premium payments and Pro billing remain out of scope for this phase.
             </p>
             <div
               style={{
@@ -592,63 +575,7 @@ export default function BitcoinLayerPage() {
                       Hold SGEN or upgrade to Watchtower Pro to access advanced Bitcoin movement intelligence, alert feeds, watchlists, and reports.
                     </p>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '420px' }}>
-                    <details id="holder-access-panel" className="panel" style={{ borderColor: 'rgba(251,191,36,0.24)', overflow: 'hidden' }}>
-                      <summary
-                        className="button button-gold"
-                        style={{ listStyle: 'none', width: '100%', cursor: 'pointer', justifyContent: 'center', borderRadius: 0 }}
-                      >
-                        Get SGEN Access
-                      </summary>
-                      <div style={{ padding: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.10)' }}>
-                        <div className="logo-inline">
-                          <Wallet className="icon large" style={{ color: '#fde68a' }} />
-                          <div className="card-title">SGEN Holder Access</div>
-                        </div>
-                        <p className="section-copy" style={{ marginTop: '0.9rem' }}>
-                          Wallet connection coming soon.
-                        </p>
-                        <div className="token-list" style={{ marginTop: '1rem' }}>
-                          <div className="token-item" style={{ flexDirection: 'column', gap: '0.35rem' }}>
-                            <span style={{ color: '#fde68a', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.16em' }}>Supported wallet</span>
-                            <strong>Solflare</strong>
-                          </div>
-                          <div className="token-item" style={{ flexDirection: 'column', gap: '0.35rem' }}>
-                            <span style={{ color: '#fde68a', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.16em' }}>SGEN mint</span>
-                            <strong style={{ wordBreak: 'break-all' }}>{SGEN_MINT}</strong>
-                          </div>
-                          <div className="token-item" style={{ flexDirection: 'column', gap: '0.35rem' }}>
-                            <span style={{ color: '#fde68a', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.16em' }}>Access rule</span>
-                            <strong>Hold SGEN to unlock Bitcoin Watchtower holder tools.</strong>
-                          </div>
-                        </div>
-                        <div className="panel-soft" style={{ padding: '1rem', marginTop: '1rem' }}>
-                          <div className="eyebrow">Placeholder status</div>
-                          <div className="token-list" style={{ marginTop: '1rem' }}>
-                            <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span>Wallet not connected</span>
-                              <strong>Pending</strong>
-                            </div>
-                            <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span>SGEN balance: Not checked</span>
-                              <strong>Pending</strong>
-                            </div>
-                            <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span>Access: Locked</span>
-                              <strong>Pending</strong>
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'grid', gap: '0.75rem', marginTop: '1rem' }}>
-                          <MockWalletButton>Connect Wallet</MockWalletButton>
-                          <MockWalletButton>Check SGEN Balance</MockWalletButton>
-                          <MockWalletButton variant="gold">Unlock Holder Dashboard</MockWalletButton>
-                        </div>
-                      </div>
-                    </details>
-                    <ButtonLink href="#access">Join Watchtower Pro</ButtonLink>
-                    <ButtonLink href={HOME_URL} variant="outline">Back to Home</ButtonLink>
-                  </div>
+                  <HolderAccessPanel />
                 </div>
               </div>
             </div>
