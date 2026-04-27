@@ -20,6 +20,7 @@ type CheckStatus = 'idle' | 'checking' | 'success' | 'error';
 
 type DebugState = {
   network: string;
+  checkedWalletAddress: string;
   tokenAccountsFound: number;
   matchingSgenAccounts: number;
   detectedSgenBalance: number;
@@ -28,6 +29,7 @@ type DebugState = {
 
 const defaultDebugState: DebugState = {
   network: SOLANA_NETWORK_LABEL,
+  checkedWalletAddress: 'Not checked',
   tokenAccountsFound: 0,
   matchingSgenAccounts: 0,
   detectedSgenBalance: 0,
@@ -48,6 +50,95 @@ export default function HolderAccessPanel() {
   const [error, setError] = useState<string | null>(null);
   const [dashboardMessage, setDashboardMessage] = useState<string | null>(null);
   const [debugState, setDebugState] = useState<DebugState>(defaultDebugState);
+  const [manualWalletAddress, setManualWalletAddress] = useState('');
+
+  const runBalanceCheck = useCallback(
+    async (ownerPublicKey: PublicKey) => {
+      const ownerAddress = ownerPublicKey.toBase58();
+
+      setIsChecking(true);
+      setError(null);
+      setDebugState((current) => ({
+        ...current,
+        network: SOLANA_NETWORK_LABEL,
+        checkedWalletAddress: ownerAddress,
+        lastCheckStatus: 'checking',
+      }));
+
+      console.log('[SGEN access] network', SOLANA_NETWORK_LABEL);
+      console.log('[SGEN access] connected wallet address', publicKey?.toBase58() ?? 'Wallet not connected');
+      console.log('[SGEN access] checked wallet address', ownerAddress);
+
+      try {
+        const [tokenProgramAccounts, token2022Accounts] = await Promise.all([
+          connection.getParsedTokenAccountsByOwner(ownerPublicKey, {
+            programId: TOKEN_PROGRAM_ID,
+          }),
+          connection.getParsedTokenAccountsByOwner(ownerPublicKey, {
+            programId: TOKEN_2022_PROGRAM_ID,
+          }),
+        ]);
+
+        const allAccounts = [...tokenProgramAccounts.value, ...token2022Accounts.value];
+        console.log('[SGEN access] token accounts found', allAccounts.length);
+
+        const matchingAccounts = allAccounts.filter((accountInfo) => {
+          const accountData = accountInfo.account.data;
+
+          if (typeof accountData !== 'object' || !('parsed' in accountData)) {
+            return false;
+          }
+
+          const parsedData = (accountData as ParsedAccountData).parsed.info as {
+            mint?: string;
+          };
+
+          return parsedData.mint === SGEN_MINT;
+        });
+
+        console.log('[SGEN access] matching SGEN accounts', matchingAccounts.length);
+
+        const total = matchingAccounts.reduce((sum, accountInfo, index) => {
+          const accountData = accountInfo.account.data as ParsedAccountData;
+          const parsedInfo = accountData.parsed.info as {
+            tokenAmount?: {
+              uiAmount?: number | null;
+            };
+          };
+          const uiAmount = parsedInfo.tokenAmount?.uiAmount ?? 0;
+
+          console.log('[SGEN access] raw tokenAmount.uiAmount', index, uiAmount);
+
+          return sum + uiAmount;
+        }, 0);
+
+        console.log('[SGEN access] total SGEN balance', total);
+
+        setBalanceUiAmount(total);
+        setDebugState({
+          network: SOLANA_NETWORK_LABEL,
+          checkedWalletAddress: ownerAddress,
+          tokenAccountsFound: allAccounts.length,
+          matchingSgenAccounts: matchingAccounts.length,
+          detectedSgenBalance: total,
+          lastCheckStatus: 'success',
+        });
+      } catch (balanceError) {
+        console.error('[SGEN access] balance check failed', balanceError);
+        setBalanceUiAmount(null);
+        setError('Unable to verify SGEN balance.');
+        setDebugState((current) => ({
+          ...current,
+          network: SOLANA_NETWORK_LABEL,
+          checkedWalletAddress: ownerAddress,
+          lastCheckStatus: 'error',
+        }));
+      } finally {
+        setIsChecking(false);
+      }
+    },
+    [connection, publicKey],
+  );
 
   const checkBalance = useCallback(async () => {
     if (!publicKey) {
@@ -57,79 +148,8 @@ export default function HolderAccessPanel() {
       return;
     }
 
-    setIsChecking(true);
-    setError(null);
-    setDebugState((current) => ({ ...current, lastCheckStatus: 'checking' }));
-
-    console.log('[SGEN access] network', SOLANA_NETWORK_LABEL);
-    console.log('[SGEN access] connected wallet address', publicKey.toBase58());
-
-    try {
-      const [tokenProgramAccounts, token2022Accounts] = await Promise.all([
-        connection.getParsedTokenAccountsByOwner(publicKey, {
-          programId: TOKEN_PROGRAM_ID,
-        }),
-        connection.getParsedTokenAccountsByOwner(publicKey, {
-          programId: TOKEN_2022_PROGRAM_ID,
-        }),
-      ]);
-
-      const allAccounts = [...tokenProgramAccounts.value, ...token2022Accounts.value];
-      console.log('[SGEN access] token accounts found', allAccounts.length);
-
-      const matchingAccounts = allAccounts.filter((accountInfo) => {
-        const accountData = accountInfo.account.data;
-
-        if (typeof accountData !== 'object' || !('parsed' in accountData)) {
-          return false;
-        }
-
-        const parsedData = (accountData as ParsedAccountData).parsed.info as {
-          mint?: string;
-        };
-
-        return parsedData.mint === SGEN_MINT;
-      });
-
-      console.log('[SGEN access] matching SGEN accounts', matchingAccounts.length);
-
-      const total = matchingAccounts.reduce((sum, accountInfo, index) => {
-        const accountData = accountInfo.account.data as ParsedAccountData;
-        const parsedInfo = accountData.parsed.info as {
-          tokenAmount?: {
-            uiAmount?: number | null;
-          };
-        };
-        const uiAmount = parsedInfo.tokenAmount?.uiAmount ?? 0;
-
-        console.log('[SGEN access] raw tokenAmount.uiAmount', index, uiAmount);
-
-        return sum + uiAmount;
-      }, 0);
-
-      console.log('[SGEN access] total SGEN balance', total);
-
-      setBalanceUiAmount(total);
-      setDebugState({
-        network: SOLANA_NETWORK_LABEL,
-        tokenAccountsFound: allAccounts.length,
-        matchingSgenAccounts: matchingAccounts.length,
-        detectedSgenBalance: total,
-        lastCheckStatus: 'success',
-      });
-    } catch (balanceError) {
-      console.error('[SGEN access] balance check failed', balanceError);
-      setBalanceUiAmount(null);
-      setError('Unable to verify SGEN balance.');
-      setDebugState((current) => ({
-        ...current,
-        network: SOLANA_NETWORK_LABEL,
-        lastCheckStatus: 'error',
-      }));
-    } finally {
-      setIsChecking(false);
-    }
-  }, [connection, publicKey]);
+    await runBalanceCheck(publicKey);
+  }, [publicKey, runBalanceCheck]);
 
   useEffect(() => {
     if (wallet && !connected && !connecting) {
@@ -138,6 +158,12 @@ export default function HolderAccessPanel() {
       });
     }
   }, [wallet, connected, connecting, connect]);
+
+  useEffect(() => {
+    if (publicKey) {
+      setManualWalletAddress(publicKey.toBase58());
+    }
+  }, [publicKey]);
 
   useEffect(() => {
     if (connected && publicKey) {
@@ -200,6 +226,27 @@ export default function HolderAccessPanel() {
         : 'Connect a wallet with SGEN to unlock holder-only Bitcoin Watchtower tools.',
     );
   }, [hasHolderAccess]);
+
+  const handleManualCheck = useCallback(async () => {
+    const trimmedAddress = manualWalletAddress.trim();
+
+    if (!trimmedAddress) {
+      setError('Enter a wallet address to run the public holder check.');
+      return;
+    }
+
+    try {
+      const ownerPublicKey = new PublicKey(trimmedAddress);
+      await runBalanceCheck(ownerPublicKey);
+    } catch {
+      setError('Enter a valid Solana wallet address.');
+      setDebugState((current) => ({
+        ...current,
+        checkedWalletAddress: trimmedAddress || 'Not checked',
+        lastCheckStatus: 'error',
+      }));
+    }
+  }, [manualWalletAddress, runBalanceCheck]);
 
   return (
     <div id="holder-access-cta" style={{ display: 'grid', gap: '0.75rem', width: '100%', maxWidth: '420px' }}>
@@ -267,6 +314,10 @@ export default function HolderAccessPanel() {
                 <strong>{debugState.network}</strong>
               </div>
               <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Checked wallet</span>
+                <strong style={{ wordBreak: 'break-all', textAlign: 'right' }}>{debugState.checkedWalletAddress}</strong>
+              </div>
+              <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Token accounts found</span>
                 <strong>{debugState.tokenAccountsFound}</strong>
               </div>
@@ -282,6 +333,29 @@ export default function HolderAccessPanel() {
                 <span>Last check status</span>
                 <strong>{debugState.lastCheckStatus}</strong>
               </div>
+            </div>
+            <div style={{ display: 'grid', gap: '0.75rem', marginTop: '1rem' }}>
+              <label style={{ display: 'grid', gap: '0.45rem' }}>
+                <span style={{ color: '#fde68a', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.16em' }}>
+                  Public wallet debug check
+                </span>
+                <input
+                  value={manualWalletAddress}
+                  onChange={(event) => setManualWalletAddress(event.target.value)}
+                  placeholder="Paste any Solana wallet address"
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(0,0,0,0.22)',
+                    color: '#f8fafc',
+                  }}
+                />
+              </label>
+              <button type="button" className="button button-outline" onClick={() => void handleManualCheck()}>
+                Run Public Address Check
+              </button>
             </div>
           </div>
           {wallet?.adapter?.name ? (
