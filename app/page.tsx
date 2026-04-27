@@ -276,6 +276,7 @@ export default function Page() {
             <nav className="nav">
               <a href="#tokens" className="nav-link">Tokens</a>
               <a href="#value-loop" className="nav-link">Value Loop</a>
+              <a href="#liquidity" className="nav-link">Liquidity</a>
               <a href="#roadmap" className="nav-link">Roadmap</a>
               <a href="/watchtower" className="nav-link">Bitcoin Layer</a>
               <ButtonLink href={WHITEPAPER_URL} target="_blank">Read Whitepaper</ButtonLink>
@@ -472,6 +473,42 @@ export default function Page() {
                 <p className="section-copy" style={{ marginTop: '1.5rem' }}>
                   Treasury policy is designed for transparency and control, with multi-signature management and governance-linked decision paths.
                 </p>
+              </div>
+            </div>
+          </Section>
+
+          <Section id="liquidity" eyebrow="Liquidity" title="Trade carefully and verify the SGEN mint before you swap.">
+            <p className="section-copy">
+              SGEN liquidity is live on Meteora. Start small, trade carefully, and always verify the SGEN mint address before swapping.
+            </p>
+            <div className="card-grid" style={{ marginTop: '2.5rem' }}>
+              <div className="panel card">
+                <div className="logo-inline">
+                  <Wallet className="icon large gold" />
+                  <div className="card-title">SGEN liquidity is live on Meteora</div>
+                </div>
+                <p className="section-copy" style={{ marginTop: '1rem' }}>
+                  SGEN liquidity is live on Meteora. Start small, trade carefully, and always verify the SGEN mint address before swapping.
+                </p>
+                <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
+                  {[
+                    ['Token', 'Satoshi Genesis (SGEN)'],
+                    ['Network', 'Solana mainnet'],
+                    ['SGEN mint address', 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF'],
+                    ['Meteora pool link', 'PASTE_METEORA_POOL_LINK_HERE'],
+                    ['Warning', 'Always verify the mint address before trading.'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="token-item" style={{ alignItems: 'flex-start', gap: '1rem' }}>
+                      <strong style={{ minWidth: '10.5rem', color: '#fde68a' }}>{label}</strong>
+                      <span style={{ wordBreak: 'break-all' }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: '1.5rem' }}>
+                  <ButtonLink href={METEORA_POOL_URL} target="_blank" variant="gold">
+                    Trade / Add Liquidity on Meteora
+                  </ButtonLink>
+                </div>
               </div>
             </div>
           </Section>
