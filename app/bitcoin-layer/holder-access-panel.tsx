@@ -11,6 +11,10 @@ const SGEN_DECIMALS = 8;
 const SOLANA_NETWORK_LABEL = 'mainnet-beta';
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+const MAINNET_RPC_ENDPOINTS = [
+  'https://solana-rpc.publicnode.com',
+  'https://api.mainnet-beta.solana.com',
+] as const;
 const balanceFormatter = new Intl.NumberFormat(undefined, {
   minimumFractionDigits: 0,
   maximumFractionDigits: SGEN_DECIMALS,
@@ -20,6 +24,7 @@ type CheckStatus = 'idle' | 'checking' | 'success' | 'error';
 
 type DebugState = {
   network: string;
+  rpcEndpoint: string;
   checkedWalletAddress: string;
   tokenAccountsFound: number;
   matchingSgenAccounts: number;
@@ -27,8 +32,20 @@ type DebugState = {
   lastCheckStatus: CheckStatus;
 };
 
+type ConnectionQueryResult = {
+  accounts: unknown[];
+  error: string | null;
+};
+
+type NormalizedTokenAccount = {
+  mint: string;
+  uiAmount: number;
+  rawTokenAmount: unknown;
+};
+
 const defaultDebugState: DebugState = {
   network: SOLANA_NETWORK_LABEL,
+  rpcEndpoint: 'Not checked',
   checkedWalletAddress: 'Not checked',
   tokenAccountsFound: 0,
   matchingSgenAccounts: 0,
@@ -38,6 +55,75 @@ const defaultDebugState: DebugState = {
 
 function formatTokenAmount(amount: number) {
   return balanceFormatter.format(amount);
+}
+
+function normalizeParsedTokenAccount(accountInfo: unknown): NormalizedTokenAccount | null {
+  if (!accountInfo || typeof accountInfo !== 'object') {
+    return null;
+  }
+
+  const maybeAccount = accountInfo as {
+    account?: {
+      data?: unknown;
+    };
+  };
+
+  const accountData = maybeAccount.account?.data;
+
+  if (!accountData || typeof accountData !== 'object' || !('parsed' in accountData)) {
+    return null;
+  }
+
+  const parsedData = (accountData as ParsedAccountData).parsed?.info as {
+    mint?: string;
+    tokenAmount?: {
+      uiAmount?: number | null;
+    };
+  };
+
+  if (!parsedData?.mint) {
+    return null;
+  }
+
+  return {
+    mint: parsedData.mint,
+    uiAmount: parsedData.tokenAmount?.uiAmount ?? 0,
+    rawTokenAmount: parsedData.tokenAmount ?? null,
+  };
+}
+
+async function fetchParsedTokenAccountsByOwnerRpc(
+  endpoint: string,
+  ownerAddress: string,
+  programId: string,
+) {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: `${ownerAddress}-${programId}`,
+      method: 'getTokenAccountsByOwner',
+      params: [ownerAddress, { programId }, { encoding: 'jsonParsed' }],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    error?: { message?: string };
+    result?: { value?: unknown[] };
+  };
+
+  if (payload.error) {
+    throw new Error(payload.error.message || 'RPC error');
+  }
+
+  return Array.isArray(payload.result?.value) ? payload.result.value : [];
 }
 
 export default function HolderAccessPanel() {
@@ -52,6 +138,21 @@ export default function HolderAccessPanel() {
   const [debugState, setDebugState] = useState<DebugState>(defaultDebugState);
   const [manualWalletAddress, setManualWalletAddress] = useState('');
 
+  const queryConnectionAccounts = useCallback(
+    async (ownerPublicKey: PublicKey, programId: PublicKey, label: string): Promise<ConnectionQueryResult> => {
+      try {
+        const response = await connection.getParsedTokenAccountsByOwner(ownerPublicKey, { programId });
+        console.log(`[SGEN access] ${label} token accounts found`, response.value.length);
+        return { accounts: response.value, error: null };
+      } catch (queryError) {
+        const message = queryError instanceof Error ? queryError.message : 'Unknown connection query error';
+        console.error(`[SGEN access] ${label} query failed`, queryError);
+        return { accounts: [], error: message };
+      }
+    },
+    [connection],
+  );
+
   const runBalanceCheck = useCallback(
     async (ownerPublicKey: PublicKey) => {
       const ownerAddress = ownerPublicKey.toBase58();
@@ -61,6 +162,7 @@ export default function HolderAccessPanel() {
       setDebugState((current) => ({
         ...current,
         network: SOLANA_NETWORK_LABEL,
+        rpcEndpoint: 'Checking...',
         checkedWalletAddress: ownerAddress,
         lastCheckStatus: 'checking',
       }));
@@ -70,46 +172,62 @@ export default function HolderAccessPanel() {
       console.log('[SGEN access] checked wallet address', ownerAddress);
 
       try {
-        const [tokenProgramAccounts, token2022Accounts] = await Promise.all([
-          connection.getParsedTokenAccountsByOwner(ownerPublicKey, {
-            programId: TOKEN_PROGRAM_ID,
-          }),
-          connection.getParsedTokenAccountsByOwner(ownerPublicKey, {
-            programId: TOKEN_2022_PROGRAM_ID,
-          }),
+        const [tokenProgramResult, token2022ProgramResult] = await Promise.all([
+          queryConnectionAccounts(ownerPublicKey, TOKEN_PROGRAM_ID, 'wallet-adapter SPL token'),
+          queryConnectionAccounts(ownerPublicKey, TOKEN_2022_PROGRAM_ID, 'wallet-adapter Token-2022'),
         ]);
 
-        const allAccounts = [...tokenProgramAccounts.value, ...token2022Accounts.value];
-        console.log('[SGEN access] token accounts found', allAccounts.length);
+        const connectionErrors = [tokenProgramResult.error, token2022ProgramResult.error].filter(
+          (value): value is string => Boolean(value),
+        );
 
-        const matchingAccounts = allAccounts.filter((accountInfo) => {
-          const accountData = accountInfo.account.data;
+        let resolvedEndpoint = 'wallet-adapter connection';
+        let normalizedAccounts = [...tokenProgramResult.accounts, ...token2022ProgramResult.accounts]
+          .map((accountInfo) => normalizeParsedTokenAccount(accountInfo))
+          .filter((account): account is NormalizedTokenAccount => account !== null);
 
-          if (typeof accountData !== 'object' || !('parsed' in accountData)) {
-            return false;
+        if (connectionErrors.length > 0) {
+          console.warn('[SGEN access] connection query errors', connectionErrors);
+
+          let fallbackRecovered = false;
+          let lastFallbackError = 'Unknown RPC fallback failure';
+
+          for (const endpoint of MAINNET_RPC_ENDPOINTS) {
+            try {
+              console.log('[SGEN access] trying RPC fallback endpoint', endpoint);
+
+              const [rpcTokenProgramAccounts, rpcToken2022ProgramAccounts] = await Promise.all([
+                fetchParsedTokenAccountsByOwnerRpc(endpoint, ownerAddress, TOKEN_PROGRAM_ID.toBase58()),
+                fetchParsedTokenAccountsByOwnerRpc(endpoint, ownerAddress, TOKEN_2022_PROGRAM_ID.toBase58()),
+              ]);
+
+              normalizedAccounts = [...rpcTokenProgramAccounts, ...rpcToken2022ProgramAccounts]
+                .map((accountInfo) => normalizeParsedTokenAccount(accountInfo))
+                .filter((account): account is NormalizedTokenAccount => account !== null);
+              resolvedEndpoint = endpoint;
+              fallbackRecovered = true;
+
+              console.log('[SGEN access] RPC fallback token accounts found', normalizedAccounts.length);
+              break;
+            } catch (fallbackError) {
+              lastFallbackError = fallbackError instanceof Error ? fallbackError.message : 'Unknown RPC fallback error';
+              console.error('[SGEN access] RPC fallback failed', endpoint, fallbackError);
+            }
           }
 
-          const parsedData = (accountData as ParsedAccountData).parsed.info as {
-            mint?: string;
-          };
+          if (!fallbackRecovered) {
+            throw new Error(lastFallbackError);
+          }
+        }
 
-          return parsedData.mint === SGEN_MINT;
-        });
+        const matchingAccounts = normalizedAccounts.filter((account) => account.mint === SGEN_MINT);
 
+        console.log('[SGEN access] token accounts found', normalizedAccounts.length);
         console.log('[SGEN access] matching SGEN accounts', matchingAccounts.length);
 
-        const total = matchingAccounts.reduce((sum, accountInfo, index) => {
-          const accountData = accountInfo.account.data as ParsedAccountData;
-          const parsedInfo = accountData.parsed.info as {
-            tokenAmount?: {
-              uiAmount?: number | null;
-            };
-          };
-          const uiAmount = parsedInfo.tokenAmount?.uiAmount ?? 0;
-
-          console.log('[SGEN access] raw tokenAmount.uiAmount', index, uiAmount);
-
-          return sum + uiAmount;
+        const total = matchingAccounts.reduce((sum, account, index) => {
+          console.log('[SGEN access] raw tokenAmount', index, account.rawTokenAmount);
+          return sum + account.uiAmount;
         }, 0);
 
         console.log('[SGEN access] total SGEN balance', total);
@@ -117,8 +235,9 @@ export default function HolderAccessPanel() {
         setBalanceUiAmount(total);
         setDebugState({
           network: SOLANA_NETWORK_LABEL,
+          rpcEndpoint: resolvedEndpoint,
           checkedWalletAddress: ownerAddress,
-          tokenAccountsFound: allAccounts.length,
+          tokenAccountsFound: normalizedAccounts.length,
           matchingSgenAccounts: matchingAccounts.length,
           detectedSgenBalance: total,
           lastCheckStatus: 'success',
@@ -126,7 +245,7 @@ export default function HolderAccessPanel() {
       } catch (balanceError) {
         console.error('[SGEN access] balance check failed', balanceError);
         setBalanceUiAmount(null);
-        setError('Unable to verify SGEN balance.');
+        setError('Unable to verify SGEN balance right now.');
         setDebugState((current) => ({
           ...current,
           network: SOLANA_NETWORK_LABEL,
@@ -137,7 +256,7 @@ export default function HolderAccessPanel() {
         setIsChecking(false);
       }
     },
-    [connection, publicKey],
+    [publicKey, queryConnectionAccounts],
   );
 
   const checkBalance = useCallback(async () => {
@@ -312,6 +431,10 @@ export default function HolderAccessPanel() {
               <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Network</span>
                 <strong>{debugState.network}</strong>
+              </div>
+              <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>RPC endpoint</span>
+                <strong style={{ wordBreak: 'break-all', textAlign: 'right' }}>{debugState.rpcEndpoint}</strong>
               </div>
               <div className="token-item" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Checked wallet</span>
