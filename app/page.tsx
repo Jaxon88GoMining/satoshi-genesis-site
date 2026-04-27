@@ -495,7 +495,7 @@ export default function Page() {
                     ['Token', 'Satoshi Genesis (SGEN)'],
                     ['Network', 'Solana mainnet'],
                     ['SGEN mint address', 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF'],
-                    ['Meteora pool link', 'PASTE_METEORA_POOL_LINK_HERE'],
+                    ['Meteora pool link', 'https://app.meteora.ag/dlmm/AvWn3ppCNaLDDKfN2rwY2Mhs5m34zGvM5PD18j5jTbVu'],
                     ['Warning', 'Always verify the mint address before trading.'],
                   ].map(([label, value]) => (
                     <div key={label} className="token-item" style={{ alignItems: 'flex-start', gap: '1rem' }}>
