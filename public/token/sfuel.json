@@ -1,0 +1,38 @@
+{
+  "name": "Satoshi Fuel",
+  "symbol": "SFUEL",
+  "description": "Placeholder metadata for SFUEL. SFUEL is the utility token under SGEN in the Satoshi Genesis ecosystem. Final mint and liquidity details will be added after the manual Solana mainnet launch through Raydium LaunchLab.",
+  "image": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo.png",
+  "external_url": "https://satoshi-genesis-site.vercel.app/sfuel",
+  "attributes": [
+    {
+      "trait_type": "Status",
+      "value": "Placeholder - manual mainnet launch pending"
+    },
+    {
+      "trait_type": "Role",
+      "value": "Utility token under SGEN"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Solana mainnet"
+    },
+    {
+      "trait_type": "Parent asset",
+      "value": "SGEN"
+    }
+  ],
+  "extensions": {
+    "website": "https://satoshi-genesis-site.vercel.app/sfuel",
+    "documentation": "https://satoshi-genesis-site.vercel.app/downloads/whitepaper.pdf"
+  },
+  "properties": {
+    "category": "fungible",
+    "files": [
+      {
+        "uri": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo.png",
+        "type": "image/png"
+      }
+    ]
+  }
+}
