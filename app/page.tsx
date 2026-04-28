@@ -16,7 +16,8 @@ import {
 const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const DECK_URL = '/downloads/pitch-deck.pptx';
 const TOKENOMICS_URL = '/downloads/tokenomics-graphic.pdf';
-const METEORA_POOL_URL = 'https://app.meteora.ag/dlmm/AvWn3ppCNaLDDKfN2rwY2Mhs5m34zGvM5PD18j5jTbVu';
+const RAYDIUM_POOL_URL_PLACEHOLDER = 'PASTE_RAYDIUM_POOL_LINK_HERE';
+const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -95,7 +96,7 @@ const faq = [
   },
   {
     q: 'What chain is SGEN live on?',
-    a: 'SGEN is live on Solana mainnet as a Token-2022 asset, with public liquidity currently routed through Meteora.',
+    a: 'SGEN is live on Solana mainnet as a Token-2022 asset. Raydium liquidity is planned / in setup.',
   },
 ];
 
@@ -167,6 +168,29 @@ function ButtonLink({
     <a className={className} href={href} target={target} rel={target === '_blank' ? 'noreferrer' : undefined}>
       {children}
     </a>
+  );
+}
+
+
+function PendingTradeButton({
+  children,
+  variant = 'gold',
+}: {
+  children: React.ReactNode;
+  variant?: 'gold' | 'outline';
+}) {
+  const className = variant === 'outline' ? 'button button-outline' : 'button button-gold';
+
+  return (
+    <span
+      className={className}
+      role="button"
+      aria-disabled="true"
+      title="Final Raydium pool link pending"
+      style={{ opacity: 0.9, cursor: 'not-allowed' }}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -302,9 +326,9 @@ export default function Page() {
                   <ButtonLink href="#tokenomics">
                     Explore the Ecosystem <ArrowRight className="icon" />
                   </ButtonLink>
-                  <ButtonLink href={METEORA_POOL_URL} target="_blank" variant="gold">
-                    Open SGEN-SOL on Meteora
-                  </ButtonLink>
+                  <PendingTradeButton>
+                    Trade SGEN on Raydium
+                  </PendingTradeButton>
                   <ButtonLink href={TOKENOMICS_URL} target="_blank" variant="outline">
                     View Token Design
                   </ButtonLink>
@@ -477,26 +501,46 @@ export default function Page() {
             </div>
           </Section>
 
-          <Section id="liquidity" eyebrow="Liquidity" title="Trade carefully and verify the SGEN mint before you swap.">
+          <Section id="liquidity" eyebrow="Liquidity" title="Raydium liquidity planned / in setup.">
             <p className="section-copy">
-              SGEN liquidity is live on Meteora. Start small, trade carefully, and always verify the SGEN mint address before swapping.
+              Initial SGEN liquidity is planned through a Raydium CPMM SGEN/SOL pool. The starting liquidity model is designed to begin small and controlled, with an initial test pool of 50,000 SGEN paired with 0.05 SOL. This creates an initial reference price of 0.000001 SOL per SGEN. Liquidity may be expanded gradually after pool creation, testing, and community review.
             </p>
             <div className="card-grid" style={{ marginTop: '2.5rem' }}>
               <div className="panel card">
                 <div className="logo-inline">
                   <Wallet className="icon large gold" />
-                  <div className="card-title">SGEN liquidity is live on Meteora</div>
+                  <div className="card-title">Liquidity</div>
                 </div>
                 <p className="section-copy" style={{ marginTop: '1rem' }}>
-                  SGEN liquidity is live on Meteora. Start small, trade carefully, and always verify the SGEN mint address before swapping.
+                  Initial SGEN liquidity is planned through a Raydium CPMM SGEN/SOL pool. The starting liquidity model is designed to begin small and controlled, with an initial test pool of 50,000 SGEN paired with 0.05 SOL. This creates an initial reference price of 0.000001 SOL per SGEN. Liquidity may be expanded gradually after pool creation, testing, and community review.
                 </p>
                 <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
                   {[
+                    ['Status', 'Raydium liquidity planned / in setup.'],
                     ['Token', 'Satoshi Genesis (SGEN)'],
                     ['Network', 'Solana mainnet'],
-                    ['SGEN mint address', 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF'],
-                    ['Meteora pool link', 'https://app.meteora.ag/dlmm/AvWn3ppCNaLDDKfN2rwY2Mhs5m34zGvM5PD18j5jTbVu'],
-                    ['Warning', 'Always verify the mint address before trading.'],
+                    ['SGEN mint address', SGEN_MINT],
+                    ['Raydium pool link', RAYDIUM_POOL_URL_PLACEHOLDER],
+                  ].map(([label, value]) => (
+                    <div key={label} className="token-item" style={{ alignItems: 'flex-start', gap: '1rem' }}>
+                      <strong style={{ minWidth: '10.5rem', color: '#fde68a' }}>{label}</strong>
+                      <span style={{ wordBreak: 'break-all' }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="panel card">
+                <div className="logo-inline">
+                  <ShieldCheck className="icon large gold" />
+                  <div className="card-title">Trading Access</div>
+                </div>
+                <p className="section-copy" style={{ marginTop: '1rem' }}>
+                  Trading access is planned through Raydium once the CPMM SGEN/SOL pool is created, tested, and reviewed. The public pool link is still being finalized.
+                </p>
+                <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
+                  {[
+                    ['Trade button', 'Trade SGEN on Raydium'],
+                    ['Pool link placeholder', RAYDIUM_POOL_URL_PLACEHOLDER],
                   ].map(([label, value]) => (
                     <div key={label} className="token-item" style={{ alignItems: 'flex-start', gap: '1rem' }}>
                       <strong style={{ minWidth: '10.5rem', color: '#fde68a' }}>{label}</strong>
@@ -505,15 +549,22 @@ export default function Page() {
                   ))}
                 </div>
                 <div style={{ marginTop: '1.5rem' }}>
-                  <ButtonLink href={METEORA_POOL_URL} target="_blank" variant="gold">
-                    Trade / Add Liquidity on Meteora
-                  </ButtonLink>
+                  <PendingTradeButton>Trade SGEN on Raydium</PendingTradeButton>
                 </div>
               </div>
             </div>
+            <div className="panel card" style={{ marginTop: '1.5rem' }}>
+              <div className="logo-inline">
+                <ShieldCheck className="icon large gold" />
+                <div className="card-title">Risk Disclaimer</div>
+              </div>
+              <p className="section-copy" style={{ marginTop: '1rem' }}>
+                SGEN liquidity is experimental and early-stage. Pool pricing, liquidity depth, slippage, and availability may change. Users should always verify the official SGEN mint address before trading.
+              </p>
+            </div>
           </Section>
 
-          <Section id="roadmap" eyebrow="Roadmap" title="Built in phases, not hype cycles.">
+          <Section id="roadmap" eyebrow="Launch Plan" title="Built in phases, with trading access introduced carefully.">
             <p className="section-copy">
               Satoshi Genesis is designed to move from disciplined concept to structured launch with the core documents, treasury rules, and token logic in place before public expansion.
             </p>
@@ -522,7 +573,7 @@ export default function Page() {
                 ['Phase 1', 'Foundation', 'Finalize brand identity, token names, litepaper, whitepaper, and contract scope.'],
                 ['Phase 2', 'Build', 'Deploy contracts in test environments and validate staking, emissions, burns, and treasury flow.'],
                 ['Phase 3', 'Community', 'Launch website, publish docs, open channels, and prepare public-facing materials.'],
-                ['Phase 4', 'Launch', 'Deploy production contracts, seed liquidity, enable staking, and activate ecosystem participation.'],
+                ['Phase 4', 'Launch', 'Initial SGEN liquidity is planned through a Raydium CPMM SGEN/SOL pool. The starting liquidity model is designed to begin small and controlled, with an initial test pool of 50,000 SGEN paired with 0.05 SOL. This creates an initial reference price of 0.000001 SOL per SGEN. Liquidity may be expanded gradually after pool creation, testing, and community review.'],
               ].map(([phase, title, text]) => (
                 <div key={phase} className="panel card">
                   <div className="eyebrow">{phase}</div>
@@ -558,7 +609,7 @@ export default function Page() {
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <ButtonLink href={METEORA_POOL_URL} target="_blank" variant="gold">Open Meteora Pool</ButtonLink>
+                    <PendingTradeButton>Trade SGEN on Raydium</PendingTradeButton>
                     <ButtonLink href={WHITEPAPER_URL} target="_blank">Read the Whitepaper</ButtonLink>
                     <ButtonLink href={DECK_URL} target="_blank" variant="outline">View the Deck</ButtonLink>
                   </div>
@@ -570,7 +621,7 @@ export default function Page() {
 
         <footer style={{ borderTop: '1px solid rgba(255,255,255,0.10)', background: 'rgba(0,0,0,0.20)' }}>
           <div className="container footer-links">
-            <ButtonLink href={METEORA_POOL_URL} target="_blank" variant="outline">Open Meteora Pool</ButtonLink>
+            <PendingTradeButton variant="outline">Trade SGEN on Raydium</PendingTradeButton>
             <ButtonLink href={WHITEPAPER_URL} target="_blank" variant="outline">Whitepaper PDF</ButtonLink>
             <ButtonLink href={DECK_URL} target="_blank" variant="outline">Pitch Deck</ButtonLink>
             <ButtonLink href={TOKENOMICS_URL} target="_blank" variant="outline">Tokenomics Graphic</ButtonLink>
@@ -584,7 +635,7 @@ export default function Page() {
               </div>
             </div>
             <div className="footer-note">
-              Working concept website for project presentation and planning. Public launch materials, legal review, tax treatment, compliance, and smart contract audit should be completed before deployment.
+              Working concept website for project presentation and planning. Raydium liquidity is planned / in setup. SGEN liquidity is experimental and early-stage, and users should always verify the official SGEN mint address before trading.
             </div>
           </div>
         </footer>
