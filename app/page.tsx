@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { PublicKey } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import {
   ArrowRight,
   ChevronRight,
@@ -284,7 +284,7 @@ function LoopStep({ number, title, text }: LoopStepProps) {
 }
 
 function formatTokenAmount(rawAmount: bigint, decimals: number) {
-  if (rawAmount === 0n) return '0';
+  if (rawAmount === BigInt(0)) return '0';
 
   const padded = rawAmount.toString().padStart(decimals + 1, '0');
   const whole = padded.slice(0, -decimals) || '0';
@@ -299,7 +299,8 @@ function shortenAddress(address: string) {
 
 function SgenHolderAccess() {
   const { connection } = useConnection();
-  const { connected, publicKey } = useWallet();
+  const { connected, disconnect, publicKey } = useWallet();
+  const { setVisible } = useWalletModal();
   const [accessState, setAccessState] = useState<HolderAccessState>('idle');
   const [walletAddress, setWalletAddress] = useState('');
   const [sgenBalance, setSgenBalance] = useState('0');
@@ -324,7 +325,7 @@ function SgenHolderAccess() {
       try {
         const sgenMint = new PublicKey(SGEN_MINT);
         const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: sgenMint });
-        let rawBalance = 0n;
+        let rawBalance = BigInt(0);
         let decimals = 0;
 
         for (const account of tokenAccounts.value) {
@@ -336,7 +337,7 @@ function SgenHolderAccess() {
         if (cancelled) return;
 
         setSgenBalance(formatTokenAmount(rawBalance, decimals));
-        setAccessState(rawBalance > 0n ? 'granted' : 'denied');
+        setAccessState(rawBalance > BigInt(0) ? 'granted' : 'denied');
       } catch (error) {
         if (cancelled) return;
 
@@ -382,7 +383,15 @@ function SgenHolderAccess() {
                 Use the wallet button to connect Solflare or Phantom. The site reads your public wallet address and checks for SGEN.
               </p>
               <div className="wallet-button-wrap">
-                <WalletMultiButton />
+                {connected ? (
+                  <button className="button button-outline" type="button" onClick={() => disconnect()}>
+                    Disconnect Wallet
+                  </button>
+                ) : (
+                  <button className="button button-gold" type="button" onClick={() => setVisible(true)}>
+                    Connect Wallet
+                  </button>
+                )}
               </div>
             </div>
 
@@ -504,6 +513,8 @@ export default function Page() {
             </div>
           </section>
 
+          <SgenHolderAccess />
+
           <Section id="why" eyebrow="Why it exists" title="A cleaner structure for a stronger crypto economy.">
             <p className="section-copy">
               Many token projects fail because one asset is expected to handle governance, rewards, utility, growth, and long-term value at the same time. Satoshi Genesis separates those roles to reduce internal conflict and create a more durable system.
@@ -536,8 +547,6 @@ export default function Page() {
               </div>
             </motion.div>
           </Section>
-
-          <SgenHolderAccess />
 
           <Section id="tokens" eyebrow="Token architecture" title="Two tokens. Clear jobs. Better balance.">
             <p className="section-copy">
