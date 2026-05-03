@@ -1,7 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { PublicKey } from '@solana/web3.js';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import {
   ArrowRight,
   ChevronRight,
@@ -57,6 +60,8 @@ type LoopStepProps = {
   title: string;
   text: string;
 };
+
+type HolderAccessState = 'idle' | 'checking' | 'granted' | 'denied' | 'error';
 
 const features: FeatureCardProps[] = [
   {
@@ -278,6 +283,137 @@ function LoopStep({ number, title, text }: LoopStepProps) {
   );
 }
 
+function formatTokenAmount(rawAmount: bigint, decimals: number) {
+  if (rawAmount === 0n) return '0';
+
+  const padded = rawAmount.toString().padStart(decimals + 1, '0');
+  const whole = padded.slice(0, -decimals) || '0';
+  const fraction = padded.slice(-decimals).replace(/0+$/, '');
+
+  return fraction ? `${whole}.${fraction}` : whole;
+}
+
+function shortenAddress(address: string) {
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
+
+function SgenHolderAccess() {
+  const { connection } = useConnection();
+  const { connected, publicKey } = useWallet();
+  const [accessState, setAccessState] = useState<HolderAccessState>('idle');
+  const [walletAddress, setWalletAddress] = useState('');
+  const [sgenBalance, setSgenBalance] = useState('0');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkSgenBalance() {
+      if (!connected || !publicKey) {
+        setAccessState('idle');
+        setWalletAddress('');
+        setSgenBalance('0');
+        setErrorMessage('');
+        return;
+      }
+
+      setAccessState('checking');
+      setWalletAddress(publicKey.toBase58());
+      setErrorMessage('');
+
+      try {
+        const sgenMint = new PublicKey(SGEN_MINT);
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: sgenMint });
+        let rawBalance = 0n;
+        let decimals = 0;
+
+        for (const account of tokenAccounts.value) {
+          const tokenAmount = account.account.data.parsed.info.tokenAmount;
+          decimals = tokenAmount.decimals;
+          rawBalance += BigInt(tokenAmount.amount);
+        }
+
+        if (cancelled) return;
+
+        setSgenBalance(formatTokenAmount(rawBalance, decimals));
+        setAccessState(rawBalance > 0n ? 'granted' : 'denied');
+      } catch (error) {
+        if (cancelled) return;
+
+        setAccessState('error');
+        setErrorMessage(error instanceof Error ? error.message : 'Unable to check SGEN balance.');
+      }
+    }
+
+    checkSgenBalance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connected, connection, publicKey]);
+
+  const statusLabel =
+    accessState === 'granted'
+      ? 'Access Granted'
+      : accessState === 'denied'
+        ? 'No SGEN detected'
+        : accessState === 'checking'
+          ? 'Checking SGEN balance...'
+          : accessState === 'error'
+            ? 'Wallet check failed'
+            : 'Wallet not connected';
+
+  return (
+    <section id="holder-access" className="section">
+      <div className="container">
+        <motion.div {...fadeUp} className="panel holder-access-panel">
+          <div>
+            <div className="eyebrow">SGEN holder access</div>
+            <h2 className="section-title" style={{ marginTop: '1rem' }}>Connect your wallet to unlock holder access.</h2>
+            <p className="section-copy">
+              Connect Solflare or Phantom to verify your SGEN balance against the official Solana mainnet mint.
+            </p>
+          </div>
+
+          <div className="holder-access-grid">
+            <div className="holder-wallet-card">
+              <div className="card-title">Wallet Connect</div>
+              <p className="section-copy">
+                Use the wallet button to connect Solflare or Phantom. The site reads your public wallet address and checks for SGEN.
+              </p>
+              <div className="wallet-button-wrap">
+                <WalletMultiButton />
+              </div>
+            </div>
+
+            <div className={`holder-status-card holder-status-${accessState}`}>
+              <div className="brand-kicker">Access Status</div>
+              <div className="holder-status-title">{statusLabel}</div>
+              {walletAddress ? (
+                <div className="holder-detail">
+                  <strong>Wallet</strong>
+                  <span>{shortenAddress(walletAddress)}</span>
+                </div>
+              ) : null}
+              <div className="holder-detail">
+                <strong>SGEN mint</strong>
+                <span>{SGEN_MINT}</span>
+              </div>
+              {accessState === 'granted' || accessState === 'denied' ? (
+                <div className="holder-detail">
+                  <strong>SGEN balance</strong>
+                  <span>{sgenBalance}</span>
+                </div>
+              ) : null}
+              {accessState === 'error' ? <p className="section-copy">{errorMessage}</p> : null}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
 export default function Page() {
   return (
     <div className="page">
@@ -400,6 +536,8 @@ export default function Page() {
               </div>
             </motion.div>
           </Section>
+
+          <SgenHolderAccess />
 
           <Section id="tokens" eyebrow="Token architecture" title="Two tokens. Clear jobs. Better balance.">
             <p className="section-copy">
