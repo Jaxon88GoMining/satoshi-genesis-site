@@ -6,6 +6,7 @@ import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { SgenHolderDashboard } from './SgenHolderDashboard';
 
 const network = WalletAdapterNetwork.Mainnet;
 const mainnetEndpoint = 'https://api.mainnet-beta.solana.com';
@@ -26,7 +27,10 @@ export function AppWalletProvider({ children }: { children: ReactNode }) {
   return (
     <ConnectionProvider endpoint={endpoint} config={{ commitment: 'confirmed' }}>
       <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>{children}</WalletModalProvider>
+        <WalletModalProvider>
+          {children}
+          <SgenHolderDashboard />
+        </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
   );
