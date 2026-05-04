@@ -7,7 +7,6 @@ import styles from './SgenHolderDashboard.module.css';
 
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 const CLAIM_INTERVAL_MS = 24 * 60 * 60 * 1000;
-const CLAIM_REWARD_AMOUNT = 10;
 
 type HolderAccessState = 'checking' | 'granted' | 'denied' | 'error';
 
@@ -24,6 +23,25 @@ type ClaimLedger = {
   sfuelRewardsBalance: number;
   totalClaims: number;
   lastClaimTime: number | null;
+};
+
+type HolderTier = {
+  claimAmount: number;
+  minimumSgen: number;
+  name: string;
+};
+
+const HOLDER_TIERS: HolderTier[] = [
+  { name: 'Genesis Whale', minimumSgen: 100000, claimAmount: 250 },
+  { name: 'Gold', minimumSgen: 10000, claimAmount: 75 },
+  { name: 'Silver', minimumSgen: 1000, claimAmount: 25 },
+  { name: 'Bronze', minimumSgen: 1, claimAmount: 10 },
+];
+
+const NO_TIER: HolderTier = {
+  name: 'No tier',
+  minimumSgen: 0,
+  claimAmount: 0,
 };
 
 async function getSgenBalance(walletAddress: string) {
@@ -106,6 +124,16 @@ function formatClaimTime(timestamp: number | null) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(timestamp));
+}
+
+function getSgenBalanceAmount(balance: string) {
+  const parsedBalance = Number(balance.replace(/,/g, '').trim());
+  return Number.isFinite(parsedBalance) ? parsedBalance : 0;
+}
+
+function getHolderTier(balance: string) {
+  const balanceAmount = getSgenBalanceAmount(balance);
+  return HOLDER_TIERS.find((tier) => balanceAmount >= tier.minimumSgen) || NO_TIER;
 }
 
 export function SgenHolderDashboard() {
@@ -201,10 +229,11 @@ export function SgenHolderDashboard() {
 
   const statusLabel = getStatusLabel(accessState);
   const holderZoneVisible = accessState === 'granted';
+  const holderTier = getHolderTier(sgenBalance);
   const lastClaimTime = claimLedger.lastClaimTime;
   const nextClaimTime = lastClaimTime ? lastClaimTime + CLAIM_INTERVAL_MS : 0;
   const claimRemainingMs = Math.max(0, nextClaimTime - now);
-  const canClaimRewards = holderZoneVisible && claimRemainingMs <= 0;
+  const canClaimRewards = holderZoneVisible && holderTier.claimAmount > 0 && claimRemainingMs <= 0;
   const claimCountdown = formatCountdown(claimRemainingMs);
   const nextClaimAvailable = !lastClaimTime || claimRemainingMs <= 0 ? 'Ready now' : formatClaimTime(nextClaimTime);
   const pillClassName = [
@@ -220,7 +249,7 @@ export function SgenHolderDashboard() {
 
     const claimTime = Date.now();
     const nextClaimLedger: ClaimLedger = {
-      sfuelRewardsBalance: claimLedger.sfuelRewardsBalance + CLAIM_REWARD_AMOUNT,
+      sfuelRewardsBalance: claimLedger.sfuelRewardsBalance + holderTier.claimAmount,
       totalClaims: claimLedger.totalClaims + 1,
       lastClaimTime: claimTime,
     };
@@ -255,6 +284,21 @@ export function SgenHolderDashboard() {
             <div className={styles.item}>
               <span>Access</span>
               <strong>{statusLabel}</strong>
+            </div>
+          </div>
+
+          <div className={styles.tierGrid}>
+            <div className={styles.tierItem}>
+              <span>Current tier</span>
+              <strong>{holderTier.name}</strong>
+            </div>
+            <div className={styles.tierItem}>
+              <span>SGEN balance</span>
+              <strong>{accessState === 'checking' ? 'Checking...' : sgenBalance}</strong>
+            </div>
+            <div className={styles.tierItem}>
+              <span>Daily SFUEL claim amount</span>
+              <strong>{holderTier.claimAmount} SFUEL</strong>
             </div>
           </div>
 
