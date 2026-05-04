@@ -157,7 +157,7 @@ a { color: inherit; text-decoration: none; }
   flex-wrap: wrap;
   margin-top: 2rem;
 }
-stats-grid, .feature-grid, .token-grid, .loop-grid, .card-grid, .faq-grid {
+.stats-grid, .feature-grid, .token-grid, .loop-grid, .card-grid, .faq-grid {
   display: grid;
   gap: 1rem;
 }
