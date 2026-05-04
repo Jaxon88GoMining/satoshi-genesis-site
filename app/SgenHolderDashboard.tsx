@@ -6,6 +6,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import styles from './SgenHolderDashboard.module.css';
 
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
+const CLAIM_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 type HolderAccessState = 'checking' | 'granted' | 'denied' | 'error';
 
@@ -42,12 +43,30 @@ function getStatusLabel(accessState: HolderAccessState) {
   return 'Wallet check failed';
 }
 
+function getClaimStorageKey(walletAddress: string) {
+  return `sgen-daily-claim:${walletAddress}`;
+}
+
+function formatCountdown(remainingMs: number) {
+  if (remainingMs <= 0) return 'Ready now';
+
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${hours}h ${minutes}m ${seconds}s`;
+}
+
 export function SgenHolderDashboard() {
   const { connected, publicKey } = useWallet();
   const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
   const [accessState, setAccessState] = useState<HolderAccessState>('checking');
   const [walletAddress, setWalletAddress] = useState('');
   const [sgenBalance, setSgenBalance] = useState('0');
+  const [lastClaimTime, setLastClaimTime] = useState<number | null>(null);
+  const [claimMessage, setClaimMessage] = useState('');
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     function mountDashboardPortal() {
@@ -105,10 +124,38 @@ export function SgenHolderDashboard() {
     };
   }, [connected, publicKey]);
 
+  useEffect(() => {
+    if (!walletAddress || accessState !== 'granted') {
+      setLastClaimTime(null);
+      setClaimMessage('');
+      return;
+    }
+
+    const storedClaimTime = window.localStorage.getItem(getClaimStorageKey(walletAddress));
+    const parsedClaimTime = storedClaimTime ? Number(storedClaimTime) : 0;
+
+    setLastClaimTime(Number.isFinite(parsedClaimTime) && parsedClaimTime > 0 ? parsedClaimTime : null);
+    setClaimMessage('');
+    setNow(Date.now());
+  }, [walletAddress, accessState]);
+
+  useEffect(() => {
+    if (!lastClaimTime) return;
+
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+
+    return () => window.clearInterval(timer);
+  }, [lastClaimTime]);
+
   if (!connected || !publicKey || !portalElement) return null;
 
   const statusLabel = getStatusLabel(accessState);
   const holderZoneVisible = accessState === 'granted';
+  const nextClaimTime = lastClaimTime ? lastClaimTime + CLAIM_INTERVAL_MS : 0;
+  const claimRemainingMs = Math.max(0, nextClaimTime - now);
+  const canClaimRewards = holderZoneVisible && claimRemainingMs <= 0;
+  const claimCountdown = formatCountdown(claimRemainingMs);
   const pillClassName = [
     styles.pill,
     accessState === 'granted' ? styles.pillGranted : '',
@@ -116,6 +163,16 @@ export function SgenHolderDashboard() {
   ]
     .filter(Boolean)
     .join(' ');
+
+  function handleClaimRewards() {
+    if (!canClaimRewards || !walletAddress) return;
+
+    const claimTime = Date.now();
+    window.localStorage.setItem(getClaimStorageKey(walletAddress), claimTime.toString());
+    setLastClaimTime(claimTime);
+    setNow(claimTime);
+    setClaimMessage('Rewards claimed (SFUEL coming soon)');
+  }
 
   return createPortal(
     <section id="holder-dashboard" className={`section ${styles.section}`}>
@@ -150,6 +207,24 @@ export function SgenHolderDashboard() {
                 <div>
                   <div className="brand-kicker">Holder Only</div>
                   <h2 className={styles.title}>SGEN Holder Zone</h2>
+                </div>
+              </div>
+              <div className={styles.claim}>
+                <div>
+                  <div className="brand-kicker">Daily Claim</div>
+                  <h3 className={styles.claimTitle}>Daily Claim</h3>
+                </div>
+                <div className={styles.claimActions}>
+                  <button
+                    className={styles.claimButton}
+                    type="button"
+                    onClick={handleClaimRewards}
+                    disabled={!canClaimRewards}
+                  >
+                    Claim Rewards
+                  </button>
+                  <div className={styles.countdown}>Next claim: {claimCountdown}</div>
+                  {claimMessage ? <div className={styles.claimMessage}>{claimMessage}</div> : null}
                 </div>
               </div>
               <div className={styles.grid}>
