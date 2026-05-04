@@ -74,6 +74,60 @@
   padding-top: 1.25rem;
 }
 
+.claim {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.25rem;
+  border: 1px solid rgba(251,191,36,0.14);
+  border-radius: 18px;
+  background: rgba(251,191,36,0.06);
+  padding: 1rem;
+}
+
+.claimTitle {
+  margin: 0.45rem 0 0;
+  font-size: 1.1rem;
+}
+
+.claimActions {
+  display: grid;
+  justify-items: end;
+  gap: 0.45rem;
+}
+
+.claimButton {
+  border: 1px solid rgba(251,191,36,0.30);
+  border-radius: 9999px;
+  background: rgba(251,191,36,0.12);
+  color: #fef3c7;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+}
+
+.claimButton:hover:not(:disabled) {
+  background: rgba(251,191,36,0.20);
+}
+
+.claimButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.countdown {
+  color: var(--soft);
+  font-size: 0.85rem;
+}
+
+.claimMessage {
+  color: #86efac;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 @media (max-width: 1100px) {
   .grid {
     grid-template-columns: 1fr;
@@ -87,5 +141,14 @@
 
   .header {
     flex-direction: column;
+  }
+
+  .claim {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .claimActions {
+    justify-items: start;
   }
 }
