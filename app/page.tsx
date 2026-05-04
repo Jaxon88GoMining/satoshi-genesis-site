@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
@@ -20,6 +20,18 @@ const DECK_URL = '/downloads/pitch-deck.pptx';
 const TOKENOMICS_URL = '/downloads/tokenomics-graphic.pdf';
 const RAYDIUM_POOL_URL_PLACEHOLDER = 'PASTE_RAYDIUM_POOL_LINK_HERE';
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
+const JUPITER_PLUGIN_SCRIPT_URL = 'https://plugin.jup.ag/plugin-v1.js';
+const JUPITER_PLUGIN_TARGET_ID = 'jupiter-sgen-plugin';
+
+declare global {
+  interface Window {
+    Jupiter?: {
+      init: (config: Record<string, unknown>) => void;
+    };
+    __sgenJupiterPluginLoading?: Promise<void>;
+  }
+}
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -312,6 +324,88 @@ async function getSgenBalance(walletAddress: string) {
   return data as SgenBalanceResponse;
 }
 
+function loadJupiterPlugin() {
+  if (window.Jupiter) return Promise.resolve();
+  if (window.__sgenJupiterPluginLoading) return window.__sgenJupiterPluginLoading;
+
+  window.__sgenJupiterPluginLoading = new Promise((resolve, reject) => {
+    const existingScript = Array.from(document.scripts).find((script) => script.src === JUPITER_PLUGIN_SCRIPT_URL);
+
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Jupiter Plugin failed to load.')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = JUPITER_PLUGIN_SCRIPT_URL;
+    script.async = true;
+    script.defer = true;
+    script.dataset.preload = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Jupiter Plugin failed to load.'));
+    document.head.appendChild(script);
+  });
+
+  return window.__sgenJupiterPluginLoading;
+}
+
+function JupiterSwapWidget() {
+  const initializedRef = useRef(false);
+  const [pluginState, setPluginState] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initialisePlugin() {
+      try {
+        await loadJupiterPlugin();
+
+        if (cancelled || !window.Jupiter || initializedRef.current) return;
+
+        const target = document.getElementById(JUPITER_PLUGIN_TARGET_ID);
+        if (target) target.innerHTML = '';
+
+        window.Jupiter.init({
+          displayMode: 'integrated',
+          integratedTargetId: JUPITER_PLUGIN_TARGET_ID,
+          formProps: {
+            initialInputMint: SOL_MINT,
+            initialOutputMint: SGEN_MINT,
+            fixedMint: SGEN_MINT,
+            fixedAmount: false,
+            swapMode: 'ExactInOrOut',
+          },
+          branding: {
+            name: 'Satoshi Genesis',
+          },
+        });
+
+        initializedRef.current = true;
+        setPluginState('ready');
+      } catch {
+        if (!cancelled) setPluginState('error');
+      }
+    }
+
+    initialisePlugin();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="jupiter-widget-shell">
+      <div id={JUPITER_PLUGIN_TARGET_ID} className="jupiter-widget-target" />
+      {pluginState === 'loading' ? <div className="jupiter-widget-status">Loading Jupiter swap...</div> : null}
+      {pluginState === 'error' ? (
+        <div className="jupiter-widget-status">Jupiter swap could not load. Refresh the page and try again.</div>
+      ) : null}
+    </div>
+  );
+}
+
 function SgenHolderAccess() {
   const { connected, disconnect, publicKey } = useWallet();
   const { setVisible } = useWalletModal();
@@ -373,9 +467,9 @@ function SgenHolderAccess() {
             : 'Wallet not connected';
 
   return (
-    <section id="holder-access" className="section">
+    <section id="holder-access" className="section holder-access-section">
       <div className="container">
-        <motion.div {...fadeUp} className="panel holder-access-panel">
+        <div className="panel holder-access-panel">
           <div>
             <div className="eyebrow">SGEN holder access</div>
             <h2 className="section-title" style={{ marginTop: '1rem' }}>Connect your wallet to unlock holder access.</h2>
@@ -430,7 +524,35 @@ function SgenHolderAccess() {
               {accessState === 'error' ? <p className="section-copy">{errorMessage}</p> : null}
             </div>
           </div>
-        </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TradeSgenSection() {
+  return (
+    <section id="trade-sgen" className="section trade-sgen-section">
+      <div className="container">
+        <div className="panel trade-sgen-panel">
+          <div className="trade-sgen-grid">
+            <div>
+              <div className="eyebrow">Trade SGEN</div>
+              <h2 className="section-title" style={{ marginTop: '1rem' }}>Swap SOL into SGEN.</h2>
+              <p className="section-copy">
+                Use Jupiter swap infrastructure to search for a route into SGEN. The widget defaults to SOL as the input token and SGEN as the output token when a route is available.
+              </p>
+              <div className="holder-detail trade-mint-detail">
+                <strong>SGEN mint</strong>
+                <span>{SGEN_MINT}</span>
+              </div>
+              <p className="safety-text">
+                Trading uses third-party Solana swap infrastructure. Always confirm token mint before swapping.
+              </p>
+            </div>
+            <JupiterSwapWidget />
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -457,6 +579,8 @@ export default function Page() {
             </div>
             <nav className="nav">
               <a href="#tokens" className="nav-link">Tokens</a>
+              <a href="#holder-access" className="nav-link">Holder Access</a>
+              <a href="#trade-sgen" className="nav-link">Trade SGEN</a>
               <a href="#value-loop" className="nav-link">Value Loop</a>
               <a href="#liquidity" className="nav-link">Liquidity</a>
               <a href="#roadmap" className="nav-link">Roadmap</a>
@@ -484,9 +608,9 @@ export default function Page() {
                   <ButtonLink href="#tokenomics">
                     Explore the Ecosystem <ArrowRight className="icon" />
                   </ButtonLink>
-                  <PendingTradeButton>
-                    Trade SGEN on Raydium
-                  </PendingTradeButton>
+                  <ButtonLink href="#trade-sgen" variant="gold">
+                    Trade SGEN
+                  </ButtonLink>
                   <ButtonLink href={TOKENOMICS_URL} target="_blank" variant="outline">
                     View Token Design
                   </ButtonLink>
@@ -527,6 +651,8 @@ export default function Page() {
           </section>
 
           <SgenHolderAccess />
+
+          <TradeSgenSection />
 
           <Section id="why" eyebrow="Why it exists" title="A cleaner structure for a stronger crypto economy.">
             <p className="section-copy">
