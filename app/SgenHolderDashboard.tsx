@@ -31,6 +31,32 @@ type HolderTier = {
   name: string;
 };
 
+type BotStrategy = 'Buy the Dip' | 'Take Profit' | 'Dollar-Cost Average' | 'Momentum';
+type BotStatus = 'idle' | 'running' | 'paused';
+type TradeAction = 'Buy' | 'Sell';
+
+type PaperTrade = {
+  action: TradeAction;
+  amount: number;
+  dateTime: string;
+  entryPrice: number;
+  exitPrice: number;
+  id: string;
+  pair: string;
+  profitLoss: number;
+  status: string;
+};
+
+type AtlasSimulationState = {
+  currentBalance: number;
+  pair: string;
+  selectedStrategy: BotStrategy;
+  startingBalance: number;
+  status: BotStatus;
+  totalProfitLoss: number;
+  trades: PaperTrade[];
+};
+
 const HOLDER_TIERS: HolderTier[] = [
   { name: 'Genesis Whale', minimumSgen: 100000, claimAmount: 250 },
   { name: 'Gold', minimumSgen: 10000, claimAmount: 75 },
@@ -42,6 +68,16 @@ const NO_TIER: HolderTier = {
   name: 'No tier',
   minimumSgen: 0,
   claimAmount: 0,
+};
+
+const ATLAS_DEFAULT_BALANCE = 1000;
+const ATLAS_STORAGE_PREFIX = 'atlas-trading-bot-simulation';
+const ATLAS_STRATEGIES: BotStrategy[] = ['Buy the Dip', 'Take Profit', 'Dollar-Cost Average', 'Momentum'];
+const ATLAS_PAIRS = ['SGEN/USDC', 'SOL/USDC', 'BTC/USDC'];
+const ATLAS_BASE_PRICES: Record<string, number> = {
+  'SGEN/USDC': 0.000001,
+  'SOL/USDC': 150,
+  'BTC/USDC': 65000,
 };
 
 async function getSgenBalance(walletAddress: string) {
@@ -134,6 +170,315 @@ function getSgenBalanceAmount(balance: string) {
 function getHolderTier(balance: string) {
   const balanceAmount = getSgenBalanceAmount(balance);
   return HOLDER_TIERS.find((tier) => balanceAmount >= tier.minimumSgen) || NO_TIER;
+}
+
+function getAtlasStorageKey(walletAddress: string) {
+  return `${ATLAS_STORAGE_PREFIX}:${walletAddress}`;
+}
+
+function createDefaultAtlasState(): AtlasSimulationState {
+  return {
+    currentBalance: ATLAS_DEFAULT_BALANCE,
+    pair: 'SGEN/USDC',
+    selectedStrategy: 'Buy the Dip',
+    startingBalance: ATLAS_DEFAULT_BALANCE,
+    status: 'idle',
+    totalProfitLoss: 0,
+    trades: [],
+  };
+}
+
+function getValidStartingBalance(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : ATLAS_DEFAULT_BALANCE;
+}
+
+function parseStoredAtlasState(storedValue: string | null): AtlasSimulationState {
+  if (!storedValue) return createDefaultAtlasState();
+
+  try {
+    const parsed = JSON.parse(storedValue) as Partial<AtlasSimulationState>;
+    const startingBalance = getValidStartingBalance(Number(parsed.startingBalance));
+    const totalProfitLoss = Number(parsed.totalProfitLoss) || 0;
+    const selectedStrategy = ATLAS_STRATEGIES.includes(parsed.selectedStrategy as BotStrategy)
+      ? (parsed.selectedStrategy as BotStrategy)
+      : 'Buy the Dip';
+    const pair = typeof parsed.pair === 'string' && ATLAS_PAIRS.includes(parsed.pair)
+      ? parsed.pair
+      : 'SGEN/USDC';
+    const status = parsed.status === 'running' || parsed.status === 'paused' ? parsed.status : 'idle';
+
+    return {
+      currentBalance: Number(parsed.currentBalance) || startingBalance + totalProfitLoss,
+      pair,
+      selectedStrategy,
+      startingBalance,
+      status,
+      totalProfitLoss,
+      trades: Array.isArray(parsed.trades) ? parsed.trades.slice(0, 25) : [],
+    };
+  } catch {
+    return createDefaultAtlasState();
+  }
+}
+
+function getRandomBetween(min: number, max: number) {
+  return min + Math.random() * (max - min);
+}
+
+function getStrategySignal(strategy: BotStrategy): { action: TradeAction; movePercent: number } {
+  if (strategy === 'Buy the Dip') {
+    return { action: 'Buy', movePercent: getRandomBetween(-0.012, 0.045) };
+  }
+
+  if (strategy === 'Take Profit') {
+    return { action: 'Sell', movePercent: getRandomBetween(0.004, 0.032) };
+  }
+
+  if (strategy === 'Dollar-Cost Average') {
+    return { action: 'Buy', movePercent: getRandomBetween(-0.008, 0.022) };
+  }
+
+  const movePercent = getRandomBetween(-0.02, 0.05);
+  return { action: movePercent >= 0 ? 'Buy' : 'Sell', movePercent };
+}
+
+function createSimulatedTrade(simulation: AtlasSimulationState): PaperTrade {
+  const { action, movePercent } = getStrategySignal(simulation.selectedStrategy);
+  const basePrice = ATLAS_BASE_PRICES[simulation.pair] || 1;
+  const marketDrift = getRandomBetween(-0.018, 0.018);
+  const entryPrice = basePrice * (1 + marketDrift);
+  const exitPrice = entryPrice * (1 + movePercent);
+  const tradeSize = Math.max(10, Math.min(simulation.currentBalance * 0.1, simulation.startingBalance * 0.2));
+  const profitLoss = tradeSize * movePercent;
+
+  return {
+    action,
+    amount: Number(tradeSize.toFixed(2)),
+    dateTime: new Date().toISOString(),
+    entryPrice,
+    exitPrice,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    pair: simulation.pair,
+    profitLoss: Number(profitLoss.toFixed(2)),
+    status: 'Closed',
+  };
+}
+
+function advanceSimulation(simulation: AtlasSimulationState): AtlasSimulationState {
+  const nextTrade = createSimulatedTrade(simulation);
+  const totalProfitLoss = Number((simulation.totalProfitLoss + nextTrade.profitLoss).toFixed(2));
+
+  return {
+    ...simulation,
+    currentBalance: Number((simulation.startingBalance + totalProfitLoss).toFixed(2)),
+    totalProfitLoss,
+    trades: [nextTrade, ...simulation.trades].slice(0, 25),
+  };
+}
+
+function formatCurrency(value: number) {
+  return `${value < 0 ? '-' : ''}$${Math.abs(value).toFixed(2)}`;
+}
+
+function formatPrice(value: number) {
+  if (value < 0.01) return value.toFixed(8);
+  if (value < 1000) return value.toFixed(2);
+  return value.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+}
+
+function formatTradeDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(new Date(value));
+}
+
+function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
+  const [simulation, setSimulation] = useState<AtlasSimulationState>(() => createDefaultAtlasState());
+
+  useEffect(() => {
+    const storedSimulation = window.localStorage.getItem(getAtlasStorageKey(walletAddress));
+    setSimulation(parseStoredAtlasState(storedSimulation));
+  }, [walletAddress]);
+
+  useEffect(() => {
+    if (!walletAddress) return;
+
+    window.localStorage.setItem(getAtlasStorageKey(walletAddress), JSON.stringify(simulation));
+  }, [simulation, walletAddress]);
+
+  useEffect(() => {
+    if (simulation.status !== 'running') return;
+
+    const timer = window.setInterval(() => {
+      setSimulation((current) => {
+        if (current.status !== 'running') return current;
+        return advanceSimulation(current);
+      });
+    }, 4500);
+
+    return () => window.clearInterval(timer);
+  }, [simulation.status]);
+
+  function updateStartingBalance(value: string) {
+    const nextStartingBalance = getValidStartingBalance(Number(value));
+
+    setSimulation((current) => ({
+      ...current,
+      currentBalance: current.trades.length === 0 ? nextStartingBalance : current.currentBalance,
+      startingBalance: nextStartingBalance,
+    }));
+  }
+
+  function startSimulation() {
+    setSimulation((current) => advanceSimulation({ ...current, status: 'running' }));
+  }
+
+  function pauseSimulation() {
+    setSimulation((current) => ({ ...current, status: 'paused' }));
+  }
+
+  function resetSimulation() {
+    setSimulation((current) => {
+      const startingBalance = getValidStartingBalance(current.startingBalance);
+
+      return {
+        ...createDefaultAtlasState(),
+        currentBalance: startingBalance,
+        pair: current.pair,
+        selectedStrategy: current.selectedStrategy,
+        startingBalance,
+      };
+    });
+  }
+
+  return (
+    <div className={styles.bot}>
+      <div className={styles.botHeader}>
+        <div>
+          <div className="brand-kicker">Atlas Trading Bot</div>
+          <h3 className={styles.claimTitle}>Strategy Simulation</h3>
+        </div>
+        <div className={styles.botNotice}>Simulation only. No real trades are placed.</div>
+      </div>
+
+      <div className={styles.botControls}>
+        <label className={styles.botField}>
+          <span>Starting simulated balance</span>
+          <input
+            min="1"
+            step="50"
+            type="number"
+            value={simulation.startingBalance}
+            onChange={(event) => updateStartingBalance(event.target.value)}
+          />
+        </label>
+        <label className={styles.botField}>
+          <span>Pair</span>
+          <select
+            value={simulation.pair}
+            onChange={(event) => setSimulation((current) => ({ ...current, pair: event.target.value }))}
+          >
+            {ATLAS_PAIRS.map((pair) => (
+              <option key={pair} value={pair}>
+                {pair}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.botField}>
+          <span>Strategy</span>
+          <select
+            value={simulation.selectedStrategy}
+            onChange={(event) =>
+              setSimulation((current) => ({
+                ...current,
+                selectedStrategy: event.target.value as BotStrategy,
+              }))
+            }
+          >
+            {ATLAS_STRATEGIES.map((strategy) => (
+              <option key={strategy} value={strategy}>
+                {strategy}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className={styles.botStats}>
+        <div className={styles.botStat}>
+          <span>Current simulated balance</span>
+          <strong>{formatCurrency(simulation.currentBalance)} USDC</strong>
+        </div>
+        <div className={styles.botStat}>
+          <span>Total simulated P/L</span>
+          <strong className={simulation.totalProfitLoss >= 0 ? styles.positive : styles.negative}>
+            {formatCurrency(simulation.totalProfitLoss)}
+          </strong>
+        </div>
+        <div className={styles.botStat}>
+          <span>Status</span>
+          <strong>{simulation.status === 'running' ? 'Running' : simulation.status === 'paused' ? 'Paused' : 'Idle'}</strong>
+        </div>
+      </div>
+
+      <div className={styles.botButtons}>
+        <button className={styles.claimButton} type="button" onClick={startSimulation} disabled={simulation.status === 'running'}>
+          Start Simulation
+        </button>
+        <button className={styles.secondaryButton} type="button" onClick={pauseSimulation} disabled={simulation.status !== 'running'}>
+          Pause Simulation
+        </button>
+        <button className={styles.secondaryButton} type="button" onClick={resetSimulation}>
+          Reset Simulation
+        </button>
+      </div>
+
+      <div className={styles.tradeLog}>
+        <div className={styles.tradeLogHeader}>
+          <div className="brand-kicker">Paper Trading Log</div>
+          <span>{simulation.trades.length} simulated trades</span>
+        </div>
+        {simulation.trades.length > 0 ? (
+          <div className={styles.tableWrap}>
+            <table className={styles.tradeTable}>
+              <thead>
+                <tr>
+                  <th>Date/time</th>
+                  <th>Pair</th>
+                  <th>Action</th>
+                  <th>Amount</th>
+                  <th>Entry price</th>
+                  <th>Exit price</th>
+                  <th>Profit/Loss</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {simulation.trades.map((trade) => (
+                  <tr key={trade.id}>
+                    <td>{formatTradeDate(trade.dateTime)}</td>
+                    <td>{trade.pair}</td>
+                    <td>{trade.action}</td>
+                    <td>{formatCurrency(trade.amount)}</td>
+                    <td>{formatPrice(trade.entryPrice)}</td>
+                    <td>{formatPrice(trade.exitPrice)}</td>
+                    <td className={trade.profitLoss >= 0 ? styles.positive : styles.negative}>
+                      {formatCurrency(trade.profitLoss)}
+                    </td>
+                    <td>{trade.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className={styles.emptyLog}>Start the simulator to generate paper trades from fake market movement.</div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function SgenHolderDashboard() {
@@ -357,6 +702,7 @@ export function SgenHolderDashboard() {
                   {claimMessage ? <div className={styles.claimMessage}>{claimMessage}</div> : null}
                 </div>
               </div>
+              <AtlasTradingBot walletAddress={walletAddress} />
               <div className={styles.grid}>
                 <div className={styles.zoneCard}>
                   <div className="card-title">Coming Features</div>
