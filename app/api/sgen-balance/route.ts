@@ -13,7 +13,7 @@ const RPC_ENDPOINTS = [
 ].filter(Boolean) as string[];
 
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPF5y9wKNvEdfhHjcvTY');
+const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
 const TOKEN_PROGRAM_IDS = [
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
