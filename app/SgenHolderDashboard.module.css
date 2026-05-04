@@ -1,0 +1,91 @@
+.section {
+  padding-top: 1rem;
+}
+
+.dashboard {
+  padding: 1.4rem;
+  border-color: rgba(251,191,36,0.18);
+  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(251,191,36,0.07));
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.title {
+  margin: 0.55rem 0 0;
+  font-size: 1.35rem;
+}
+
+.pill {
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.05);
+  color: var(--gold-soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.55rem 0.8rem;
+  white-space: nowrap;
+}
+
+.pillGranted {
+  border-color: rgba(74,222,128,0.32);
+  color: #86efac;
+}
+
+.pillDenied {
+  border-color: rgba(248,113,113,0.30);
+  color: #fca5a5;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+
+.item,
+.zoneCard {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  background: rgba(0,0,0,0.14);
+  padding: 1rem;
+}
+
+.item span {
+  display: block;
+  color: var(--soft);
+  font-size: 0.82rem;
+  margin-bottom: 0.55rem;
+}
+
+.item strong {
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.zone {
+  margin-top: 1.25rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 1.25rem;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+}
