@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { PublicKey } from '@solana/web3.js';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import {
   ArrowRight,
@@ -21,10 +20,6 @@ const DECK_URL = '/downloads/pitch-deck.pptx';
 const TOKENOMICS_URL = '/downloads/tokenomics-graphic.pdf';
 const RAYDIUM_POOL_URL_PLACEHOLDER = 'PASTE_RAYDIUM_POOL_LINK_HERE';
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
-const TOKEN_PROGRAM_IDS = [
-  new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-  new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPF5y9wKNvEdfhHjcvTY'),
-];
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -287,49 +282,37 @@ function LoopStep({ number, title, text }: LoopStepProps) {
   );
 }
 
-function formatTokenAmount(rawAmount: bigint, decimals: number) {
-  if (rawAmount === BigInt(0)) return '0';
-
-  const padded = rawAmount.toString().padStart(decimals + 1, '0');
-  const whole = padded.slice(0, -decimals) || '0';
-  const fraction = padded.slice(-decimals).replace(/0+$/, '');
-
-  return fraction ? `${whole}.${fraction}` : whole;
-}
-
 function shortenAddress(address: string) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
-function readTokenAccountAmount(data: Buffer | Uint8Array) {
-  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  return view.getBigUint64(64, true);
-}
+type SgenBalanceResponse = {
+  balance: string;
+  error?: string;
+  hasSgen: boolean;
+  mint: string;
+  rawBalance: string;
+  wallet: string;
+};
 
-async function getSgenRawBalance(connection: ReturnType<typeof useConnection>['connection'], owner: PublicKey) {
-  const sgenMint = new PublicKey(SGEN_MINT);
-  let rawBalance = BigInt(0);
+async function getSgenBalance(walletAddress: string) {
+  const response = await fetch(`/api/sgen-balance?wallet=${encodeURIComponent(walletAddress)}`, {
+    cache: 'no-store',
+  });
+  const data = (await response.json()) as Partial<SgenBalanceResponse>;
 
-  for (const programId of TOKEN_PROGRAM_IDS) {
-    const tokenAccounts = await connection.getTokenAccountsByOwner(owner, { programId });
-
-    for (const account of tokenAccounts.value) {
-      const data = account.account.data;
-      if (data.length < 72) continue;
-
-      const accountMint = new PublicKey(data.subarray(0, 32));
-      if (!accountMint.equals(sgenMint)) continue;
-
-      rawBalance += readTokenAccountAmount(data);
-    }
+  if (!response.ok) {
+    throw new Error(data.error || 'Unable to check SGEN balance.');
   }
 
-  return rawBalance;
+  if (data.mint !== SGEN_MINT) {
+    throw new Error('SGEN mint mismatch. Balance check stopped.');
+  }
+
+  return data as SgenBalanceResponse;
 }
 
 function SgenHolderAccess() {
-  const { connection } = useConnection();
   const { connected, disconnect, publicKey } = useWallet();
   const { setVisible } = useWalletModal();
   const [accessState, setAccessState] = useState<HolderAccessState>('idle');
@@ -355,12 +338,14 @@ function SgenHolderAccess() {
       setErrorMessage('');
 
       try {
-        const rawBalance = await getSgenRawBalance(connection, publicKey);
+        const walletBase58 = publicKey.toBase58();
+        const result = await getSgenBalance(walletBase58);
 
         if (cancelled) return;
 
-        setSgenBalance(formatTokenAmount(rawBalance, 8));
-        setAccessState(rawBalance > BigInt(0) ? 'granted' : 'denied');
+        setWalletAddress(result.wallet);
+        setSgenBalance(result.balance);
+        setAccessState(result.hasSgen ? 'granted' : 'denied');
       } catch (error) {
         if (cancelled) return;
 
@@ -374,7 +359,7 @@ function SgenHolderAccess() {
     return () => {
       cancelled = true;
     };
-  }, [connected, connection, publicKey, refreshNonce]);
+  }, [connected, publicKey, refreshNonce]);
 
   const statusLabel =
     accessState === 'granted'
