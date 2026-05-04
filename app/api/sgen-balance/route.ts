@@ -12,9 +12,11 @@ const RPC_ENDPOINTS = [
   'https://rpc.ankr.com/solana',
 ].filter(Boolean) as string[];
 
+const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPF5y9wKNvEdfhHjcvTY');
 const TOKEN_PROGRAM_IDS = [
-  new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-  new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPF5y9wKNvEdfhHjcvTY'),
+  TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
 ];
 
 function formatTokenAmount(rawAmount: bigint, decimals: number) {
@@ -45,36 +47,42 @@ async function getMintDecimals(connection: Connection, mint: PublicKey) {
   }
 }
 
+async function getMintTokenProgramId(connection: Connection, mint: PublicKey) {
+  const mintAccount = await connection.getAccountInfo(mint, 'confirmed');
+
+  if (!mintAccount) {
+    throw new Error('SGEN mint account was not found on this RPC endpoint.');
+  }
+
+  const tokenProgramId = TOKEN_PROGRAM_IDS.find((programId) => programId.equals(mintAccount.owner));
+
+  if (!tokenProgramId) {
+    throw new Error(`SGEN mint is owned by an unsupported program: ${mintAccount.owner.toBase58()}`);
+  }
+
+  return tokenProgramId;
+}
+
 async function getSgenRawBalanceFromEndpoint(endpoint: string, owner: PublicKey) {
   const connection = new Connection(endpoint, 'confirmed');
   const sgenMint = new PublicKey(SGEN_MINT);
-  const programErrors: string[] = [];
+  const tokenProgramId = await getMintTokenProgramId(connection, sgenMint);
   let rawBalance = BigInt(0);
 
-  for (const programId of TOKEN_PROGRAM_IDS) {
-    try {
-      const tokenAccounts = await connection.getTokenAccountsByOwner(owner, { programId }, 'confirmed');
+  const tokenAccounts = await connection.getTokenAccountsByOwner(owner, { programId: tokenProgramId }, 'confirmed');
 
-      for (const account of tokenAccounts.value) {
-        const data = account.account.data;
-        if (data.length < 72) continue;
+  for (const account of tokenAccounts.value) {
+    const data = account.account.data;
+    if (data.length < 72) continue;
 
-        const accountMint = new PublicKey(data.subarray(0, 32));
-        if (!accountMint.equals(sgenMint)) continue;
+    const accountMint = new PublicKey(data.subarray(0, 32));
+    if (!accountMint.equals(sgenMint)) continue;
 
-        rawBalance += readTokenAccountAmount(data);
-      }
-    } catch (error) {
-      programErrors.push(`${programId.toBase58()}: ${getErrorMessage(error)}`);
-    }
-  }
-
-  if (programErrors.length === TOKEN_PROGRAM_IDS.length) {
-    throw new Error(programErrors.join(' | '));
+    rawBalance += readTokenAccountAmount(data);
   }
 
   const decimals = await getMintDecimals(connection, sgenMint);
-  return { decimals, rawBalance };
+  return { decimals, rawBalance, tokenProgram: tokenProgramId.toBase58() };
 }
 
 export async function GET(request: Request) {
@@ -96,7 +104,7 @@ export async function GET(request: Request) {
 
   for (const endpoint of RPC_ENDPOINTS) {
     try {
-      const { decimals, rawBalance } = await getSgenRawBalanceFromEndpoint(endpoint, owner);
+      const { decimals, rawBalance, tokenProgram } = await getSgenRawBalanceFromEndpoint(endpoint, owner);
 
       return NextResponse.json(
         {
@@ -104,6 +112,7 @@ export async function GET(request: Request) {
           hasSgen: rawBalance > BigInt(0),
           mint: SGEN_MINT,
           rawBalance: rawBalance.toString(),
+          tokenProgram,
           wallet: owner.toBase58(),
         },
         {
