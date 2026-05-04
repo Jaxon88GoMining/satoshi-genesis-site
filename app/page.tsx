@@ -21,6 +21,10 @@ const DECK_URL = '/downloads/pitch-deck.pptx';
 const TOKENOMICS_URL = '/downloads/tokenomics-graphic.pdf';
 const RAYDIUM_POOL_URL_PLACEHOLDER = 'PASTE_RAYDIUM_POOL_LINK_HERE';
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
+const TOKEN_PROGRAM_IDS = [
+  new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+  new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPF5y9wKNvEdfhHjcvTY'),
+];
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -297,6 +301,33 @@ function shortenAddress(address: string) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
+function readTokenAccountAmount(data: Buffer | Uint8Array) {
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return view.getBigUint64(64, true);
+}
+
+async function getSgenRawBalance(connection: ReturnType<typeof useConnection>['connection'], owner: PublicKey) {
+  const sgenMint = new PublicKey(SGEN_MINT);
+  let rawBalance = BigInt(0);
+
+  for (const programId of TOKEN_PROGRAM_IDS) {
+    const tokenAccounts = await connection.getTokenAccountsByOwner(owner, { programId });
+
+    for (const account of tokenAccounts.value) {
+      const data = account.account.data;
+      if (data.length < 72) continue;
+
+      const accountMint = new PublicKey(data.subarray(0, 32));
+      if (!accountMint.equals(sgenMint)) continue;
+
+      rawBalance += readTokenAccountAmount(data);
+    }
+  }
+
+  return rawBalance;
+}
+
 function SgenHolderAccess() {
   const { connection } = useConnection();
   const { connected, disconnect, publicKey } = useWallet();
@@ -305,6 +336,7 @@ function SgenHolderAccess() {
   const [walletAddress, setWalletAddress] = useState('');
   const [sgenBalance, setSgenBalance] = useState('0');
   const [errorMessage, setErrorMessage] = useState('');
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,20 +355,11 @@ function SgenHolderAccess() {
       setErrorMessage('');
 
       try {
-        const sgenMint = new PublicKey(SGEN_MINT);
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: sgenMint });
-        let rawBalance = BigInt(0);
-        let decimals = 0;
-
-        for (const account of tokenAccounts.value) {
-          const tokenAmount = account.account.data.parsed.info.tokenAmount;
-          decimals = tokenAmount.decimals;
-          rawBalance += BigInt(tokenAmount.amount);
-        }
+        const rawBalance = await getSgenRawBalance(connection, publicKey);
 
         if (cancelled) return;
 
-        setSgenBalance(formatTokenAmount(rawBalance, decimals));
+        setSgenBalance(formatTokenAmount(rawBalance, 8));
         setAccessState(rawBalance > BigInt(0) ? 'granted' : 'denied');
       } catch (error) {
         if (cancelled) return;
@@ -351,7 +374,7 @@ function SgenHolderAccess() {
     return () => {
       cancelled = true;
     };
-  }, [connected, connection, publicKey]);
+  }, [connected, connection, publicKey, refreshNonce]);
 
   const statusLabel =
     accessState === 'granted'
@@ -384,9 +407,14 @@ function SgenHolderAccess() {
               </p>
               <div className="wallet-button-wrap">
                 {connected ? (
-                  <button className="button button-outline" type="button" onClick={() => disconnect()}>
-                    Disconnect Wallet
-                  </button>
+                  <>
+                    <button className="button button-gold" type="button" onClick={() => setRefreshNonce((value) => value + 1)}>
+                      Refresh Balance
+                    </button>
+                    <button className="button button-outline" type="button" onClick={() => disconnect()}>
+                      Disconnect Wallet
+                    </button>
+                  </>
                 ) : (
                   <button className="button button-gold" type="button" onClick={() => setVisible(true)}>
                     Connect Wallet
