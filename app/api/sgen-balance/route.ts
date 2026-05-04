@@ -2,15 +2,17 @@ import { NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 20;
 
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 const FALLBACK_DECIMALS = 8;
-const RPC_ENDPOINTS = [
+const RPC_TIMEOUT_MS = 7000;
+const RPC_ENDPOINTS = Array.from(new Set([
   process.env.SOLANA_RPC_URL,
   'https://solana-rpc.publicnode.com',
   'https://api.mainnet-beta.solana.com',
   'https://rpc.ankr.com/solana',
-].filter(Boolean) as string[];
+].filter(Boolean) as string[]));
 
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
@@ -38,16 +40,11 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unknown RPC error';
 }
 
-async function getMintDecimals(connection: Connection, mint: PublicKey) {
-  try {
-    const supply = await connection.getTokenSupply(mint, 'confirmed');
-    return supply.value.decimals;
-  } catch {
-    return FALLBACK_DECIMALS;
-  }
+function getMintDecimals(data: Uint8Array) {
+  return data.length > 44 ? data[44] : FALLBACK_DECIMALS;
 }
 
-async function getMintTokenProgramId(connection: Connection, mint: PublicKey) {
+async function getMintDetails(connection: Connection, mint: PublicKey) {
   const mintAccount = await connection.getAccountInfo(mint, 'confirmed');
 
   if (!mintAccount) {
@@ -60,13 +57,28 @@ async function getMintTokenProgramId(connection: Connection, mint: PublicKey) {
     throw new Error(`SGEN mint is owned by an unsupported program: ${mintAccount.owner.toBase58()}`);
   }
 
-  return tokenProgramId;
+  return {
+    decimals: getMintDecimals(mintAccount.data),
+    tokenProgramId,
+  };
+}
+
+function withTimeout<T>(promise: Promise<T>, label: string) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(`${label} timed out`)), RPC_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
 }
 
 async function getSgenRawBalanceFromEndpoint(endpoint: string, owner: PublicKey) {
   const connection = new Connection(endpoint, 'confirmed');
   const sgenMint = new PublicKey(SGEN_MINT);
-  const tokenProgramId = await getMintTokenProgramId(connection, sgenMint);
+  const { decimals, tokenProgramId } = await getMintDetails(connection, sgenMint);
   let rawBalance = BigInt(0);
 
   const tokenAccounts = await connection.getTokenAccountsByOwner(owner, { programId: tokenProgramId }, 'confirmed');
@@ -81,8 +93,36 @@ async function getSgenRawBalanceFromEndpoint(endpoint: string, owner: PublicKey)
     rawBalance += readTokenAccountAmount(data);
   }
 
-  const decimals = await getMintDecimals(connection, sgenMint);
   return { decimals, rawBalance, tokenProgram: tokenProgramId.toBase58() };
+}
+
+async function getSgenRawBalance(owner: PublicKey) {
+  if (RPC_ENDPOINTS.length === 0) {
+    throw new Error('No RPC endpoint was available.');
+  }
+
+  return new Promise<Awaited<ReturnType<typeof getSgenRawBalanceFromEndpoint>>>((resolve, reject) => {
+    const errors: string[] = [];
+    let pending = RPC_ENDPOINTS.length;
+    let resolved = false;
+
+    for (const endpoint of RPC_ENDPOINTS) {
+      withTimeout(getSgenRawBalanceFromEndpoint(endpoint, owner), endpoint)
+        .then((result) => {
+          if (resolved) return;
+          resolved = true;
+          resolve(result);
+        })
+        .catch((error) => {
+          errors.push(`${endpoint}: ${getErrorMessage(error)}`);
+          pending -= 1;
+
+          if (!resolved && pending === 0) {
+            reject(new Error(errors.join(' | ')));
+          }
+        });
+    }
+  });
 }
 
 export async function GET(request: Request) {
@@ -100,36 +140,30 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid wallet address.' }, { status: 400 });
   }
 
-  let lastError = 'No RPC endpoint was available.';
+  try {
+    const { decimals, rawBalance, tokenProgram } = await getSgenRawBalance(owner);
 
-  for (const endpoint of RPC_ENDPOINTS) {
-    try {
-      const { decimals, rawBalance, tokenProgram } = await getSgenRawBalanceFromEndpoint(endpoint, owner);
-
-      return NextResponse.json(
-        {
-          balance: formatTokenAmount(rawBalance, decimals),
-          hasSgen: rawBalance > BigInt(0),
-          mint: SGEN_MINT,
-          rawBalance: rawBalance.toString(),
-          tokenProgram,
-          wallet: owner.toBase58(),
+    return NextResponse.json(
+      {
+        balance: formatTokenAmount(rawBalance, decimals),
+        hasSgen: rawBalance > BigInt(0),
+        mint: SGEN_MINT,
+        rawBalance: rawBalance.toString(),
+        tokenProgram,
+        wallet: owner.toBase58(),
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
         },
-        {
-          headers: {
-            'Cache-Control': 'no-store',
-          },
-        },
-      );
-    } catch (error) {
-      lastError = getErrorMessage(error);
-    }
+      },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: `Unable to check SGEN balance right now. RPC access failed: ${getErrorMessage(error)}`,
+      },
+      { status: 502 },
+    );
   }
-
-  return NextResponse.json(
-    {
-      error: `Unable to check SGEN balance right now. RPC access failed: ${lastError}`,
-    },
-    { status: 502 },
-  );
 }
