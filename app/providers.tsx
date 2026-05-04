@@ -8,7 +8,7 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 
 const network = WalletAdapterNetwork.Mainnet;
-const mainnetEndpoint = 'https://solana-rpc.publicnode.com';
+const mainnetEndpoint = 'https://api.mainnet-beta.solana.com';
 
 export function AppWalletProvider({ children }: { children: ReactNode }) {
   const endpoint = useMemo(() => mainnetEndpoint, []);
@@ -24,7 +24,7 @@ export function AppWalletProvider({ children }: { children: ReactNode }) {
   }, [endpoint]);
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider endpoint={endpoint} config={{ commitment: 'confirmed' }}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
