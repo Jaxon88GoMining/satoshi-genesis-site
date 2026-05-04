@@ -191,6 +191,10 @@ a { color: inherit; text-decoration: none; }
 .section {
   padding: 5rem 0;
 }
+#holder-access,
+.holder-access-section {
+  padding-top: 1rem;
+}
 .section-title {
   font-size: clamp(2rem, 3vw, 3rem);
   margin: 0;
@@ -259,6 +263,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .holder-access-panel {
+  opacity: 1 !important;
+  transform: none !important;
   padding: 2rem;
   border-color: rgba(251,191,36,0.20);
   background: linear-gradient(135deg, rgba(251,191,36,0.10), rgba(255,255,255,0.04));
