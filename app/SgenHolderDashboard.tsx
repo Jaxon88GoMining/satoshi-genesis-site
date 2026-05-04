@@ -7,6 +7,7 @@ import styles from './SgenHolderDashboard.module.css';
 
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 const CLAIM_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const CLAIM_REWARD_AMOUNT = 10;
 
 type HolderAccessState = 'checking' | 'granted' | 'denied' | 'error';
 
@@ -17,6 +18,12 @@ type SgenBalanceResponse = {
   mint: string;
   rawBalance: string;
   wallet: string;
+};
+
+type ClaimLedger = {
+  sfuelRewardsBalance: number;
+  totalClaims: number;
+  lastClaimTime: number | null;
 };
 
 async function getSgenBalance(walletAddress: string) {
@@ -47,6 +54,40 @@ function getClaimStorageKey(walletAddress: string) {
   return `sgen-daily-claim:${walletAddress}`;
 }
 
+function createEmptyClaimLedger(): ClaimLedger {
+  return {
+    sfuelRewardsBalance: 0,
+    totalClaims: 0,
+    lastClaimTime: null,
+  };
+}
+
+function parseStoredClaimLedger(storedValue: string | null): ClaimLedger {
+  if (!storedValue) return createEmptyClaimLedger();
+
+  const legacyClaimTime = Number(storedValue);
+  if (Number.isFinite(legacyClaimTime) && legacyClaimTime > 0) {
+    return {
+      ...createEmptyClaimLedger(),
+      lastClaimTime: legacyClaimTime,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(storedValue) as Partial<ClaimLedger>;
+    return {
+      sfuelRewardsBalance: Number(parsed.sfuelRewardsBalance) || 0,
+      totalClaims: Number(parsed.totalClaims) || 0,
+      lastClaimTime:
+        typeof parsed.lastClaimTime === 'number' && Number.isFinite(parsed.lastClaimTime)
+          ? parsed.lastClaimTime
+          : null,
+    };
+  } catch {
+    return createEmptyClaimLedger();
+  }
+}
+
 function formatCountdown(remainingMs: number) {
   if (remainingMs <= 0) return 'Ready now';
 
@@ -58,13 +99,22 @@ function formatCountdown(remainingMs: number) {
   return `${hours}h ${minutes}m ${seconds}s`;
 }
 
+function formatClaimTime(timestamp: number | null) {
+  if (!timestamp) return 'Not claimed yet';
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(timestamp));
+}
+
 export function SgenHolderDashboard() {
   const { connected, publicKey } = useWallet();
   const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
   const [accessState, setAccessState] = useState<HolderAccessState>('checking');
   const [walletAddress, setWalletAddress] = useState('');
   const [sgenBalance, setSgenBalance] = useState('0');
-  const [lastClaimTime, setLastClaimTime] = useState<number | null>(null);
+  const [claimLedger, setClaimLedger] = useState<ClaimLedger>(() => createEmptyClaimLedger());
   const [claimMessage, setClaimMessage] = useState('');
   const [now, setNow] = useState(() => Date.now());
 
@@ -126,36 +176,37 @@ export function SgenHolderDashboard() {
 
   useEffect(() => {
     if (!walletAddress || accessState !== 'granted') {
-      setLastClaimTime(null);
+      setClaimLedger(createEmptyClaimLedger());
       setClaimMessage('');
       return;
     }
 
-    const storedClaimTime = window.localStorage.getItem(getClaimStorageKey(walletAddress));
-    const parsedClaimTime = storedClaimTime ? Number(storedClaimTime) : 0;
+    const storedClaimLedger = window.localStorage.getItem(getClaimStorageKey(walletAddress));
 
-    setLastClaimTime(Number.isFinite(parsedClaimTime) && parsedClaimTime > 0 ? parsedClaimTime : null);
+    setClaimLedger(parseStoredClaimLedger(storedClaimLedger));
     setClaimMessage('');
     setNow(Date.now());
   }, [walletAddress, accessState]);
 
   useEffect(() => {
-    if (!lastClaimTime) return;
+    if (!claimLedger.lastClaimTime) return;
 
     setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
 
     return () => window.clearInterval(timer);
-  }, [lastClaimTime]);
+  }, [claimLedger.lastClaimTime]);
 
   if (!connected || !publicKey || !portalElement) return null;
 
   const statusLabel = getStatusLabel(accessState);
   const holderZoneVisible = accessState === 'granted';
+  const lastClaimTime = claimLedger.lastClaimTime;
   const nextClaimTime = lastClaimTime ? lastClaimTime + CLAIM_INTERVAL_MS : 0;
   const claimRemainingMs = Math.max(0, nextClaimTime - now);
   const canClaimRewards = holderZoneVisible && claimRemainingMs <= 0;
   const claimCountdown = formatCountdown(claimRemainingMs);
+  const nextClaimAvailable = !lastClaimTime || claimRemainingMs <= 0 ? 'Ready now' : formatClaimTime(nextClaimTime);
   const pillClassName = [
     styles.pill,
     accessState === 'granted' ? styles.pillGranted : '',
@@ -168,8 +219,14 @@ export function SgenHolderDashboard() {
     if (!canClaimRewards || !walletAddress) return;
 
     const claimTime = Date.now();
-    window.localStorage.setItem(getClaimStorageKey(walletAddress), claimTime.toString());
-    setLastClaimTime(claimTime);
+    const nextClaimLedger: ClaimLedger = {
+      sfuelRewardsBalance: claimLedger.sfuelRewardsBalance + CLAIM_REWARD_AMOUNT,
+      totalClaims: claimLedger.totalClaims + 1,
+      lastClaimTime: claimTime,
+    };
+
+    window.localStorage.setItem(getClaimStorageKey(walletAddress), JSON.stringify(nextClaimLedger));
+    setClaimLedger(nextClaimLedger);
     setNow(claimTime);
     setClaimMessage('Rewards claimed (SFUEL coming soon)');
   }
@@ -207,6 +264,35 @@ export function SgenHolderDashboard() {
                 <div>
                   <div className="brand-kicker">Holder Only</div>
                   <h2 className={styles.title}>SGEN Holder Zone</h2>
+                </div>
+              </div>
+              <div className={styles.ledger}>
+                <div className={styles.ledgerHeader}>
+                  <div>
+                    <div className="brand-kicker">SFUEL Rewards Ledger</div>
+                    <h3 className={styles.claimTitle}>SFUEL Rewards Ledger</h3>
+                  </div>
+                  <p className={styles.simulatedLabel}>
+                    Simulated rewards only {'\u2014'} real SFUEL distribution coming later.
+                  </p>
+                </div>
+                <div className={styles.ledgerGrid}>
+                  <div className={styles.ledgerItem}>
+                    <span>SFUEL Rewards Balance</span>
+                    <strong>{claimLedger.sfuelRewardsBalance} SFUEL</strong>
+                  </div>
+                  <div className={styles.ledgerItem}>
+                    <span>Total Claims</span>
+                    <strong>{claimLedger.totalClaims}</strong>
+                  </div>
+                  <div className={styles.ledgerItem}>
+                    <span>Last Claim Time</span>
+                    <strong>{formatClaimTime(lastClaimTime)}</strong>
+                  </div>
+                  <div className={styles.ledgerItem}>
+                    <span>Next Claim Available</span>
+                    <strong>{nextClaimAvailable}</strong>
+                  </div>
                 </div>
               </div>
               <div className={styles.claim}>
