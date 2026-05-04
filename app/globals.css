@@ -167,7 +167,7 @@ a { color: inherit; text-decoration: none; }
   display: grid;
   gap: 1rem;
 }
-stats-grid { grid-template-columns: repeat(3, minmax(0,1fr)); margin-top: 2.5rem; }
+.stats-grid { grid-template-columns: repeat(3, minmax(0,1fr)); margin-top: 2.5rem; }
 .feature-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
 .token-grid, .card-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 .loop-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
