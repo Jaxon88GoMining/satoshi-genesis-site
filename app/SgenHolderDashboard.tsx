@@ -44,30 +44,12 @@ type PaperTrade = {
   id: string;
   pair: string;
   profitLoss: number;
-  priceSource: string;
-  strategyUsed: BotStrategy;
   status: string;
-};
-
-type AtlasPriceMap = Record<string, number | null>;
-
-type JupiterPriceResponse = Record<
-  string,
-  {
-    usdPrice?: number;
-  }
->;
-
-type AtlasPriceSnapshot = {
-  prices: AtlasPriceMap;
-  updatedAt: string;
 };
 
 type AtlasSimulationState = {
   currentBalance: number;
-  lastPriceUpdate: string | null;
   pair: string;
-  prices: AtlasPriceMap;
   selectedStrategy: BotStrategy;
   startingBalance: number;
   status: BotStatus;
@@ -91,22 +73,11 @@ const NO_TIER: HolderTier = {
 const ATLAS_DEFAULT_BALANCE = 1000;
 const ATLAS_STORAGE_PREFIX = 'atlas-trading-bot-simulation';
 const ATLAS_STRATEGIES: BotStrategy[] = ['Buy the Dip', 'Take Profit', 'Dollar-Cost Average', 'Momentum'];
-const ATLAS_PAIRS = ['SGEN/USDC', 'SOL/USDC', 'SFUEL/USDC'];
-const ATLAS_PRICE_API_URL = 'https://lite-api.jup.ag/price/v3';
-const ATLAS_UNAVAILABLE_MESSAGE = 'Live price unavailable \u2014 using simulated fallback.';
-const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-const SOL_MINT = 'So11111111111111111111111111111111111111112';
-const SFUEL_MINT = '';
-const ATLAS_PRICE_TOKENS = [
-  { symbol: 'SOL', mint: SOL_MINT },
-  { symbol: 'SGEN', mint: SGEN_MINT },
-  { symbol: 'USDC', mint: USDC_MINT },
-  { symbol: 'SFUEL', mint: SFUEL_MINT },
-].filter((token) => token.mint);
+const ATLAS_PAIRS = ['SGEN/USDC', 'SOL/USDC', 'BTC/USDC'];
 const ATLAS_BASE_PRICES: Record<string, number> = {
   'SGEN/USDC': 0.000001,
   'SOL/USDC': 150,
-  'SFUEL/USDC': 0.0000005,
+  'BTC/USDC': 65000,
 };
 
 async function getSgenBalance(walletAddress: string) {
@@ -208,14 +179,7 @@ function getAtlasStorageKey(walletAddress: string) {
 function createDefaultAtlasState(): AtlasSimulationState {
   return {
     currentBalance: ATLAS_DEFAULT_BALANCE,
-    lastPriceUpdate: null,
     pair: 'SGEN/USDC',
-    prices: {
-      SFUEL: null,
-      SGEN: null,
-      SOL: null,
-      USDC: null,
-    },
     selectedStrategy: 'Buy the Dip',
     startingBalance: ATLAS_DEFAULT_BALANCE,
     status: 'idle',
@@ -245,12 +209,7 @@ function parseStoredAtlasState(storedValue: string | null): AtlasSimulationState
 
     return {
       currentBalance: Number(parsed.currentBalance) || startingBalance + totalProfitLoss,
-      lastPriceUpdate: typeof parsed.lastPriceUpdate === 'string' ? parsed.lastPriceUpdate : null,
       pair,
-      prices: {
-        ...createDefaultAtlasState().prices,
-        ...(parsed.prices || {}),
-      },
       selectedStrategy,
       startingBalance,
       status,
@@ -260,31 +219,6 @@ function parseStoredAtlasState(storedValue: string | null): AtlasSimulationState
   } catch {
     return createDefaultAtlasState();
   }
-}
-
-async function fetchAtlasPrices(): Promise<AtlasPriceSnapshot> {
-  if (ATLAS_PRICE_TOKENS.length === 0) {
-    return { prices: createDefaultAtlasState().prices, updatedAt: new Date().toISOString() };
-  }
-
-  const ids = ATLAS_PRICE_TOKENS.map((token) => token.mint).join(',');
-  const response = await fetch(`${ATLAS_PRICE_API_URL}?ids=${encodeURIComponent(ids)}`, {
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error('Atlas price feed unavailable.');
-  }
-
-  const data = (await response.json()) as JupiterPriceResponse;
-  const prices: AtlasPriceMap = createDefaultAtlasState().prices;
-
-  ATLAS_PRICE_TOKENS.forEach((token) => {
-    const price = data[token.mint]?.usdPrice;
-    prices[token.symbol] = typeof price === 'number' && Number.isFinite(price) && price > 0 ? price : null;
-  });
-
-  return { prices, updatedAt: new Date().toISOString() };
 }
 
 function getRandomBetween(min: number, max: number) {
@@ -308,33 +242,14 @@ function getStrategySignal(strategy: BotStrategy): { action: TradeAction; movePe
   return { action: movePercent >= 0 ? 'Buy' : 'Sell', movePercent };
 }
 
-function getTokenPriceSource(symbol: string, prices: AtlasPriceMap) {
-  return prices[symbol] ? 'Jupiter Price API live price' : ATLAS_UNAVAILABLE_MESSAGE;
-}
-
-function getPriceForPair(pair: string, prices: AtlasPriceMap) {
-  const [baseSymbol] = pair.split('/');
-  const livePrice = prices[baseSymbol];
-  const fallbackPrice = ATLAS_BASE_PRICES[pair] || 1;
-
-  return {
-    price: livePrice || fallbackPrice,
-    source: livePrice ? 'Jupiter Price API live price' : ATLAS_UNAVAILABLE_MESSAGE,
-  };
-}
-
-function createSimulatedTrade(simulation: AtlasSimulationState, latestPrices: AtlasPriceMap): PaperTrade {
+function createSimulatedTrade(simulation: AtlasSimulationState): PaperTrade {
   const { action, movePercent } = getStrategySignal(simulation.selectedStrategy);
-  const entryQuote = getPriceForPair(simulation.pair, simulation.prices);
-  const exitQuote = getPriceForPair(simulation.pair, latestPrices);
-  const hasLiveEntryAndExit =
-    entryQuote.source === 'Jupiter Price API live price' && exitQuote.source === 'Jupiter Price API live price';
-  const marketDrift = hasLiveEntryAndExit ? 0 : getRandomBetween(-0.018, 0.018);
-  const entryPrice = entryQuote.price * (1 + marketDrift);
-  const exitPrice = hasLiveEntryAndExit ? exitQuote.price : entryPrice * (1 + movePercent);
+  const basePrice = ATLAS_BASE_PRICES[simulation.pair] || 1;
+  const marketDrift = getRandomBetween(-0.018, 0.018);
+  const entryPrice = basePrice * (1 + marketDrift);
+  const exitPrice = entryPrice * (1 + movePercent);
   const tradeSize = Math.max(10, Math.min(simulation.currentBalance * 0.1, simulation.startingBalance * 0.2));
-  const units = tradeSize / entryPrice;
-  const profitLoss = action === 'Buy' ? units * (exitPrice - entryPrice) : units * (entryPrice - exitPrice);
+  const profitLoss = tradeSize * movePercent;
 
   return {
     action,
@@ -345,25 +260,17 @@ function createSimulatedTrade(simulation: AtlasSimulationState, latestPrices: At
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     pair: simulation.pair,
     profitLoss: Number(profitLoss.toFixed(2)),
-    priceSource: hasLiveEntryAndExit ? 'Jupiter Price API live entry/exit' : ATLAS_UNAVAILABLE_MESSAGE,
-    strategyUsed: simulation.selectedStrategy,
     status: 'Closed',
   };
 }
 
-function advanceSimulation(
-  simulation: AtlasSimulationState,
-  latestPriceSnapshot?: AtlasPriceSnapshot,
-): AtlasSimulationState {
-  const latestPrices = latestPriceSnapshot?.prices || simulation.prices;
-  const nextTrade = createSimulatedTrade(simulation, latestPrices);
+function advanceSimulation(simulation: AtlasSimulationState): AtlasSimulationState {
+  const nextTrade = createSimulatedTrade(simulation);
   const totalProfitLoss = Number((simulation.totalProfitLoss + nextTrade.profitLoss).toFixed(2));
 
   return {
     ...simulation,
     currentBalance: Number((simulation.startingBalance + totalProfitLoss).toFixed(2)),
-    lastPriceUpdate: latestPriceSnapshot?.updatedAt || simulation.lastPriceUpdate,
-    prices: latestPrices,
     totalProfitLoss,
     trades: [nextTrade, ...simulation.trades].slice(0, 25),
   };
@@ -388,7 +295,6 @@ function formatTradeDate(value: string) {
 
 function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
   const [simulation, setSimulation] = useState<AtlasSimulationState>(() => createDefaultAtlasState());
-  const [priceFeedStatus, setPriceFeedStatus] = useState('Loading live price feed...');
 
   useEffect(() => {
     const storedSimulation = window.localStorage.getItem(getAtlasStorageKey(walletAddress));
@@ -402,39 +308,13 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
   }, [simulation, walletAddress]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function refreshPrices() {
-      try {
-        const result = await fetchAtlasPrices();
-
-        if (cancelled) return;
-
-        setSimulation((current) => ({
-          ...current,
-          lastPriceUpdate: result.updatedAt,
-          prices: result.prices,
-        }));
-        setPriceFeedStatus('Jupiter Price API connected where token prices are available.');
-      } catch {
-        if (!cancelled) setPriceFeedStatus(ATLAS_UNAVAILABLE_MESSAGE);
-      }
-    }
-
-    refreshPrices();
-    const timer = window.setInterval(refreshPrices, 30000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, []);
-
-  useEffect(() => {
     if (simulation.status !== 'running') return;
 
     const timer = window.setInterval(() => {
-      runSimulationStep();
+      setSimulation((current) => {
+        if (current.status !== 'running') return current;
+        return advanceSimulation(current);
+      });
     }, 4500);
 
     return () => window.clearInterval(timer);
@@ -450,31 +330,8 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
     }));
   }
 
-  async function runSimulationStep(nextStatus?: BotStatus) {
-    let latestPriceSnapshot: AtlasPriceSnapshot | undefined;
-
-    try {
-      latestPriceSnapshot = await fetchAtlasPrices();
-      setPriceFeedStatus('Jupiter Price API connected where token prices are available.');
-    } catch {
-      setPriceFeedStatus(ATLAS_UNAVAILABLE_MESSAGE);
-    }
-
-    setSimulation((current) => {
-      if (!nextStatus && current.status !== 'running') return current;
-
-      return advanceSimulation(
-        {
-          ...current,
-          status: nextStatus || current.status,
-        },
-        latestPriceSnapshot,
-      );
-    });
-  }
-
   function startSimulation() {
-    runSimulationStep('running');
+    setSimulation((current) => advanceSimulation({ ...current, status: 'running' }));
   }
 
   function pauseSimulation() {
@@ -500,28 +357,9 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
       <div className={styles.botHeader}>
         <div>
           <div className="brand-kicker">Atlas Trading Bot</div>
-          <h3 className={styles.claimTitle}>Real-Price Paper Trading</h3>
+          <h3 className={styles.claimTitle}>Strategy Simulation</h3>
         </div>
         <div className={styles.botNotice}>Simulation only. No real trades are placed.</div>
-      </div>
-      <div className={styles.priceFeed}>
-        <div>
-          <span>Price feed</span>
-          <strong>{priceFeedStatus}</strong>
-        </div>
-        <div>
-          <span>Last update</span>
-          <strong>{simulation.lastPriceUpdate ? formatTradeDate(simulation.lastPriceUpdate) : 'Waiting for price data'}</strong>
-        </div>
-      </div>
-      <div className={styles.priceGrid}>
-        {(['SOL', 'SGEN', 'USDC', 'SFUEL'] as const).map((symbol) => (
-          <div className={styles.priceItem} key={symbol}>
-            <span>{symbol}</span>
-            <strong>{simulation.prices[symbol] ? `$${formatPrice(simulation.prices[symbol] || 0)}` : ATLAS_UNAVAILABLE_MESSAGE}</strong>
-            <small>{getTokenPriceSource(symbol, simulation.prices)}</small>
-          </div>
-        ))}
       </div>
 
       <div className={styles.botControls}>
@@ -614,8 +452,6 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
                   <th>Entry price</th>
                   <th>Exit price</th>
                   <th>Profit/Loss</th>
-                  <th>Strategy</th>
-                  <th>Price source</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -631,8 +467,6 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
                     <td className={trade.profitLoss >= 0 ? styles.positive : styles.negative}>
                       {formatCurrency(trade.profitLoss)}
                     </td>
-                    <td>{trade.strategyUsed || simulation.selectedStrategy}</td>
-                    <td>{trade.priceSource}</td>
                     <td>{trade.status}</td>
                   </tr>
                 ))}
@@ -640,7 +474,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
             </table>
           </div>
         ) : (
-          <div className={styles.emptyLog}>Start paper trading to generate simulated trades from Jupiter live prices where available.</div>
+          <div className={styles.emptyLog}>Start the simulator to generate paper trades from fake market movement.</div>
         )}
       </div>
     </div>
