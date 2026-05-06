@@ -955,6 +955,20 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
         </label>
       </div>
 
+      <div className={styles.botSafetyRules}>
+        <div>
+          <div className="brand-kicker">Bot Safety Rules</div>
+          <strong>Wallet-approved simulation only</strong>
+        </div>
+        <ul>
+          <li>Atlas does not auto-trade or hold funds.</li>
+          <li>Atlas never asks for seed phrases.</li>
+          <li>Manual trades are approved through your wallet.</li>
+          <li>Signals are informational only.</li>
+          <li>Simulation mode is for learning and testing.</li>
+        </ul>
+      </div>
+
       <div className={styles.riskGrid}>
         <label className={styles.botField}>
           <span>Max simulated trade size</span>
