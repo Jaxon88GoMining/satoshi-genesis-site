@@ -341,7 +341,9 @@ function getPriceFromJupiterData(pair: AtlasPair, data: JupiterPriceResponse) {
 
   return {
     price: ATLAS_BASE_PRICES[pair] || 1,
-    source: 'Fallback simulation - live pair price unavailable',
+    source: pair.startsWith('SGEN')
+      ? 'Fallback simulated signal mode - live SGEN price unavailable'
+      : 'Fallback simulated signal mode - live pair price unavailable',
   };
 }
 
@@ -380,7 +382,9 @@ function getFallbackMarketSnapshot(pair: AtlasPair, previousSnapshot?: MarketSna
     pair,
     previousPrice,
     price,
-    priceSource: 'Fallback simulation - live pair price unavailable',
+    priceSource: pair.startsWith('SGEN')
+      ? 'Fallback simulated signal mode - live SGEN price unavailable'
+      : 'Fallback simulated signal mode - live pair price unavailable',
     updatedAt: new Date().toISOString(),
   };
 }
