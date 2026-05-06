@@ -19,6 +19,7 @@ const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const DECK_URL = '/downloads/pitch-deck.pptx';
 const TOKENOMICS_URL = '/downloads/tokenomics-graphic.pdf';
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
+const SGEN_EXPLORER_URL = `https://solscan.io/token/${SGEN_MINT}`;
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const JUPITER_PRICE_API_URL = 'https://lite-api.jup.ag/price/v3';
@@ -268,6 +269,42 @@ function TradeJupiterButton({
     >
       {children}
     </a>
+  );
+}
+
+function ConnectWalletCta() {
+  const { connected } = useWallet();
+  const { setVisible } = useWalletModal();
+
+  if (connected) {
+    return (
+      <ButtonLink href="#holder-access">
+        View Holder Dashboard <ArrowRight className="icon" />
+      </ButtonLink>
+    );
+  }
+
+  return (
+    <button className="button button-primary hero-connect-button" type="button" onClick={() => setVisible(true)}>
+      Connect Wallet <Wallet className="icon" />
+    </button>
+  );
+}
+
+function TrustStrip() {
+  return (
+    <div className="container">
+      <div className="trust-strip">
+        <div className="trust-mint">
+          <span>Official SGEN Mint</span>
+          <strong>{SGEN_MINT}</strong>
+        </div>
+        <div className="trust-pill">Wallet-approved trading only</div>
+        <div className="trust-pill">No custody</div>
+        <div className="trust-pill">Never enter seed phrase</div>
+        <div className="trust-pill">Simulation-first approach</div>
+      </div>
+    </div>
   );
 }
 
@@ -808,22 +845,23 @@ export default function Page() {
                 <div style={{ marginBottom: '1.5rem' }}>
                   <SatoshiGenesisLogo size={96} wordmark />
                 </div>
-                <div className="eyebrow">Dual-token ecosystem</div>
+                <div className="hero-badge-row">
+                  <div className="prototype-badge">Prototype / Early Access</div>
+                  <div className="eyebrow">Dual-token ecosystem</div>
+                </div>
                 <h1 className="hero-title">
                   Built for activity. <span className="gold">Designed for value.</span>
                 </h1>
                 <p className="hero-copy">
                   Satoshi Genesis is a dual-token ecosystem where <strong>SGEN</strong> anchors staking, governance, and long-term alignment, while <strong>SFUEL</strong> powers rewards, participation, and ecosystem movement.
                 </p>
+                <p className="prototype-copy">
+                  Atlas signals are informational, Atlas does not auto-trade, and Jupiter swaps are approved by you through your own wallet.
+                </p>
                 <div className="hero-actions">
-                  <ButtonLink href="#tokenomics">
-                    Explore the Ecosystem <ArrowRight className="icon" />
-                  </ButtonLink>
-                  <ButtonLink href="#trade-sgen" variant="gold">
-                    Trade SGEN
-                  </ButtonLink>
-                  <ButtonLink href={TOKENOMICS_URL} target="_blank" variant="outline">
-                    View Token Design
+                  <ConnectWalletCta />
+                  <ButtonLink href="#how-it-works" variant="gold">
+                    How It Works <ArrowRight className="icon" />
                   </ButtonLink>
                 </div>
                 <div className="stats-grid">
@@ -860,6 +898,8 @@ export default function Page() {
               </motion.div>
             </div>
           </section>
+
+          <TrustStrip />
 
           <SgenHolderAccess />
 
@@ -1172,8 +1212,16 @@ export default function Page() {
           <div className="container footer-links">
             <TradeJupiterButton variant="outline">Trade on Jupiter</TradeJupiterButton>
             <ButtonLink href={WHITEPAPER_URL} target="_blank" variant="outline">Whitepaper PDF</ButtonLink>
+            <ButtonLink href={SGEN_EXPLORER_URL} target="_blank" variant="outline">Token Mint Explorer</ButtonLink>
             <ButtonLink href={DECK_URL} target="_blank" variant="outline">Pitch Deck</ButtonLink>
             <ButtonLink href={TOKENOMICS_URL} target="_blank" variant="outline">Tokenomics Graphic</ButtonLink>
+          </div>
+          <div className="container footer-quick-links">
+            <div className="quick-link-label">Quick Links</div>
+            <ButtonLink href={WHITEPAPER_URL} target="_blank" variant="outline">Whitepaper</ButtonLink>
+            <ButtonLink href={SGEN_EXPLORER_URL} target="_blank" variant="outline">Token Mint Explorer</ButtonLink>
+            <span className="placeholder-link">GitHub placeholder</span>
+            <span className="placeholder-link">Future audit placeholder</span>
           </div>
           <div className="container footer-main">
             <div className="footer-brand">

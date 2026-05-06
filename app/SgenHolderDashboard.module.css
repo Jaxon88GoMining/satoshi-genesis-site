@@ -236,6 +236,13 @@
   text-align: center;
 }
 
+.botIntro {
+  color: var(--soft);
+  line-height: 1.6;
+  margin: 0.65rem 0 0;
+  max-width: 44rem;
+}
+
 .priceFeed {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);

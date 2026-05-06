@@ -903,6 +903,9 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
         <div>
           <div className="brand-kicker">Atlas Trading Bot</div>
           <h3 className={styles.claimTitle}>Real-time Strategy Signals</h3>
+          <p className={styles.botIntro}>
+            Atlas is currently a paper-trading and signal platform designed for learning, testing, and future controlled trading tools.
+          </p>
         </div>
         <div className={styles.botNotice}>Atlas signals are informational only. No real trades are placed automatically. You approve all swaps manually through your wallet.</div>
       </div>
