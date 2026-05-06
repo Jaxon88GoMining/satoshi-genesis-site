@@ -116,22 +116,64 @@ const features: FeatureCardProps[] = [
   },
 ];
 
+const onboardingCards = [
+  {
+    title: 'What is SGEN?',
+    text: 'SGEN is the capped core asset of Satoshi Genesis. It is designed for holder access, long-term alignment, governance direction, and premium ecosystem rights.',
+  },
+  {
+    title: 'What is SFUEL?',
+    text: 'SFUEL is the utility and rewards layer. It powers claims, participation, activity loops, and future ecosystem actions without changing the fixed SGEN supply.',
+  },
+  {
+    title: 'Why Atlas uses simulation first',
+    text: 'Atlas starts with paper signals so users can learn strategy behavior, test risk settings, and review trade ideas before approving any real swap themselves.',
+  },
+  {
+    title: 'How trading works through Jupiter',
+    text: 'The site uses Jupiter swap infrastructure for manual trading routes. Users approve swaps through their own connected wallet, and the site does not execute trades automatically.',
+  },
+  {
+    title: 'Are funds safe?',
+    text: 'Funds remain in the user wallet unless the user approves a wallet transaction. Satoshi Genesis does not custody funds, ask for private keys, or request seed phrases.',
+  },
+];
+
+const howItWorksSteps = [
+  {
+    title: 'Connect',
+    text: 'Connect a Solana wallet to check SGEN holder access using the public wallet address only.',
+  },
+  {
+    title: 'Verify',
+    text: 'The dashboard checks the official SGEN mint and shows balance, access state, claim status, and holder tools.',
+  },
+  {
+    title: 'Explore',
+    text: 'Review SFUEL rewards, Atlas simulation signals, market feed rows, and paper trade history without automatic execution.',
+  },
+  {
+    title: 'Trade manually',
+    text: 'When ready, use Jupiter swap and approve any real trade directly in your own wallet.',
+  },
+];
+
 const faq = [
   {
-    q: 'Why use two tokens?',
-    a: 'Because one token rarely handles value storage, rewards, governance, and utility well at the same time. SGEN anchors the core. SFUEL powers the engine.',
+    q: 'Does Atlas place real trades?',
+    a: 'No. Atlas signals and paper logs are informational simulation tools. Real swaps require manual user approval through Jupiter and the connected wallet.',
   },
   {
-    q: 'What is SGEN for?',
-    a: 'SGEN is the capped core token used for staking, governance, premium rights, and long-term ecosystem alignment.',
+    q: 'Does the site hold my funds?',
+    a: 'No. Funds stay in the user wallet. The site reads public wallet information for holder access and relies on wallet approval for any transaction.',
   },
   {
-    q: 'What is SFUEL for?',
-    a: 'SFUEL is the utility and reward token used for participation, upgrades, access, activity, and burn-linked ecosystem flow.',
+    q: 'Will Satoshi Genesis ask for a seed phrase?',
+    a: 'Never. Do not enter a seed phrase, private key, or recovery phrase into any website claiming to be Satoshi Genesis.',
   },
   {
-    q: 'What chain is SGEN live on?',
-    a: 'SGEN is live on Solana mainnet as a Token-2022 asset. Raydium liquidity is planned / in setup.',
+    q: 'How do I verify SGEN?',
+    a: `Always check the official SGEN mint before trading: ${SGEN_MINT}`,
   },
 ];
 
@@ -746,6 +788,7 @@ export default function Page() {
             </div>
             <nav className="nav">
               <a href="#tokens" className="nav-link">Tokens</a>
+              <a href="#how-it-works" className="nav-link">How It Works</a>
               <a href="#holder-access" className="nav-link">Holder Access</a>
               <a href="#live-market-feed" className="nav-link">Market Feed</a>
               <a href="#trade-sgen" className="nav-link">Trade SGEN</a>
@@ -823,6 +866,32 @@ export default function Page() {
           <LiveMarketFeed />
 
           <TradeSgenSection />
+
+          <Section id="how-it-works" eyebrow="How It Works" title="Start simple, then go deeper.">
+            <p className="section-copy">
+              Satoshi Genesis is built so a beginner can connect, verify, learn, and trade manually without giving up custody or relying on hidden automation.
+            </p>
+            <div className="onboarding-step-grid">
+              {howItWorksSteps.map((step, index) => (
+                <div key={step.title} className="panel onboarding-step">
+                  <div className="guide-index">{String(index + 1).padStart(2, '0')}</div>
+                  <div className="card-title">{step.title}</div>
+                  <p className="section-copy">{step.text}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Section id="beginner-guide" eyebrow="Beginner Guide" title="SGEN, SFUEL, Atlas, and Jupiter in plain English.">
+            <div className="guide-grid">
+              {onboardingCards.map((card) => (
+                <div key={card.title} className="panel guide-card">
+                  <div className="card-title">{card.title}</div>
+                  <p className="section-copy">{card.text}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
 
           <Section id="why" eyebrow="Why it exists" title="A cleaner structure for a stronger crypto economy.">
             <p className="section-copy">
@@ -1020,7 +1089,7 @@ export default function Page() {
             </div>
           </Section>
 
-          <Section id="roadmap" eyebrow="Launch Plan" title="Built in phases, with trading access introduced carefully.">
+          <Section id="roadmap" eyebrow="Roadmap" title="Built in phases, with trading access introduced carefully.">
             <p className="section-copy">
               Satoshi Genesis is designed to move from disciplined concept to structured launch with the core documents, treasury rules, and token logic in place before public expansion.
             </p>
@@ -1035,6 +1104,30 @@ export default function Page() {
                   <div className="eyebrow">{phase}</div>
                   <div className="card-title" style={{ marginTop: '0.75rem' }}>{title}</div>
                   <p className="section-copy" style={{ marginTop: '0.75rem' }}>{text}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Section id="security-safety" eyebrow="Security & Safety" title="Designed around user custody and clear approvals.">
+            <p className="section-copy">
+              Satoshi Genesis should feel powerful without asking users to surrender control. The site is structured around public wallet reads, manual wallet approvals, and clearly labeled simulations.
+            </p>
+            <div className="safety-grid">
+              {[
+                ['No custody', 'The site does not hold user funds or operate pooled user wallets.'],
+                ['No seed phrases', 'Never share seed phrases, private keys, or recovery phrases with any site or support account.'],
+                ['Manual approvals', 'Real swaps happen through Jupiter and must be approved in the connected wallet.'],
+                ['Informational signals', 'Atlas signals, market feed rows, and paper logs are for learning, testing, and decision support.'],
+                ['Verify mints', `SGEN must remain ${SGEN_MINT}. Always verify before swapping.`],
+                ['Fallback labels', 'Simulated market rows and fallback signal modes are clearly labeled when live data is unavailable.'],
+              ].map(([title, text]) => (
+                <div key={title} className="panel safety-card">
+                  <ShieldCheck className="icon large gold" />
+                  <div>
+                    <div className="card-title">{title}</div>
+                    <p className="section-copy">{text}</p>
+                  </div>
                 </div>
               ))}
             </div>
