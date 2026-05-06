@@ -144,6 +144,7 @@ const ATLAS_DEFAULT_RISK_SETTINGS: RiskSettings = {
   takeProfitPercent: 8,
 };
 const ATLAS_SAFETY_BLOCKED_MESSAGE = 'Signal blocked by safety settings';
+const ATLAS_SIGNAL_DEDUPE_WINDOW_MS = 3000;
 
 async function getSgenBalance(walletAddress: string) {
   const response = await fetch(`/api/sgen-balance?wallet=${encodeURIComponent(walletAddress)}`, {
@@ -579,6 +580,34 @@ function createSignalHistoryEntry(
   };
 }
 
+function addSignalHistoryEntry(
+  history: SignalHistoryEntry[],
+  entry: SignalHistoryEntry,
+): SignalHistoryEntry[] {
+  const latestEntry = history[0];
+
+  if (latestEntry) {
+    const latestTime = new Date(latestEntry.time).getTime();
+    const entryTime = new Date(entry.time).getTime();
+    const isDuplicateSignal =
+      latestEntry.pair === entry.pair &&
+      latestEntry.strategy === entry.strategy &&
+      latestEntry.signal === entry.signal &&
+      latestEntry.confidence === entry.confidence;
+
+    if (
+      isDuplicateSignal &&
+      Number.isFinite(latestTime) &&
+      Number.isFinite(entryTime) &&
+      Math.abs(entryTime - latestTime) <= ATLAS_SIGNAL_DEDUPE_WINDOW_MS
+    ) {
+      return history;
+    }
+  }
+
+  return [entry, ...history].slice(0, 50);
+}
+
 function recordSignalOnSimulation(
   simulation: AtlasSimulationState,
   signal: StrategySignal,
@@ -785,10 +814,9 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
           current.lastSignalTime,
         );
         setStrategySignal(currentSignal);
-        setSignalHistory((history) => [
-          createSignalHistoryEntry(current, marketSnapshot, currentSignal),
-          ...history,
-        ].slice(0, 50));
+        setSignalHistory((history) =>
+          addSignalHistoryEntry(history, createSignalHistoryEntry(current, marketSnapshot, currentSignal)),
+        );
         return advanceSimulation(recordSignalOnSimulation(current, currentSignal), marketSnapshot, currentSignal);
       });
     }, 4500);
@@ -834,10 +862,9 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
         current.lastSignalTime,
       );
       setStrategySignal(currentSignal);
-      setSignalHistory((history) => [
-        createSignalHistoryEntry(current, marketSnapshot, currentSignal),
-        ...history,
-      ].slice(0, 50));
+      setSignalHistory((history) =>
+        addSignalHistoryEntry(history, createSignalHistoryEntry(current, marketSnapshot, currentSignal)),
+      );
       return advanceSimulation(recordSignalOnSimulation({ ...current, status: 'running' }, currentSignal), marketSnapshot, currentSignal);
     });
   }
