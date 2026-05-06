@@ -396,6 +396,17 @@
   color: #fca5a5 !important;
 }
 
+.safetyBlocked {
+  border: 1px solid rgba(251,191,36,0.22);
+  border-radius: 14px;
+  background: rgba(251,191,36,0.08);
+  color: #fde68a;
+  font-size: 0.86rem;
+  font-weight: 800;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+}
+
 .botButtons {
   display: flex;
   flex-wrap: wrap;
@@ -472,6 +483,10 @@
 
 .tradeTable tr:last-child td {
   border-bottom: 0;
+}
+
+.signalHistoryTable {
+  min-width: 980px;
 }
 
 .emptyLog {

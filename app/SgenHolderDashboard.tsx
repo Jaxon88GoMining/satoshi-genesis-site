@@ -57,7 +57,7 @@ type PaperTrade = {
 
 type RiskSettings = {
   cooldownSeconds: number;
-  dailyMaxTrades: number;
+  dailyMaxSignals: number;
   maxTradeSize: number;
   stopLossPercent: number;
   takeProfitPercent: number;
@@ -74,13 +74,27 @@ type MarketSnapshot = {
 
 type StrategySignal = {
   action: SignalAction;
+  blocked?: boolean;
   confidence: number;
   lastUpdated: string | null;
   reason: string;
 };
 
+type SignalHistoryEntry = {
+  confidence: number;
+  id: string;
+  pair: AtlasPair;
+  priceSource: string;
+  reason: string;
+  signal: SignalAction;
+  strategy: BotStrategy;
+  time: string;
+};
+
 type AtlasSimulationState = {
   currentBalance: number;
+  dailySignalCount: number;
+  dailySignalDay: string;
   dailyTradeCount: number;
   dailyTradeDay: string;
   lastSignalTime: number | null;
@@ -124,11 +138,12 @@ const ATLAS_BASE_PRICES: Record<string, number> = {
 };
 const ATLAS_DEFAULT_RISK_SETTINGS: RiskSettings = {
   cooldownSeconds: 60,
-  dailyMaxTrades: 8,
+  dailyMaxSignals: 8,
   maxTradeSize: 100,
   stopLossPercent: 4,
   takeProfitPercent: 8,
 };
+const ATLAS_SAFETY_BLOCKED_MESSAGE = 'Signal blocked by safety settings';
 
 async function getSgenBalance(walletAddress: string) {
   const response = await fetch(`/api/sgen-balance?wallet=${encodeURIComponent(walletAddress)}`, {
@@ -226,18 +241,24 @@ function getAtlasStorageKey(walletAddress: string) {
   return `${ATLAS_STORAGE_PREFIX}:${walletAddress}`;
 }
 
+function getAtlasSignalHistoryStorageKey(walletAddress: string) {
+  return `${ATLAS_STORAGE_PREFIX}:signals:${walletAddress}`;
+}
+
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
 function getValidRiskSettings(value: Partial<RiskSettings> | undefined): RiskSettings {
+  const legacyValue = value as Partial<RiskSettings> & { dailyMaxTrades?: number };
+
   return {
     cooldownSeconds: Number.isFinite(Number(value?.cooldownSeconds))
       ? Math.max(0, Math.min(3600, Number(value?.cooldownSeconds)))
       : ATLAS_DEFAULT_RISK_SETTINGS.cooldownSeconds,
-    dailyMaxTrades: Number.isFinite(Number(value?.dailyMaxTrades))
-      ? Math.max(1, Math.min(50, Number(value?.dailyMaxTrades)))
-      : ATLAS_DEFAULT_RISK_SETTINGS.dailyMaxTrades,
+    dailyMaxSignals: Number.isFinite(Number(value?.dailyMaxSignals ?? legacyValue?.dailyMaxTrades))
+      ? Math.max(1, Math.min(100, Number(value?.dailyMaxSignals ?? legacyValue?.dailyMaxTrades)))
+      : ATLAS_DEFAULT_RISK_SETTINGS.dailyMaxSignals,
     maxTradeSize: Number.isFinite(Number(value?.maxTradeSize))
       ? Math.max(1, Math.min(1000000, Number(value?.maxTradeSize)))
       : ATLAS_DEFAULT_RISK_SETTINGS.maxTradeSize,
@@ -253,6 +274,8 @@ function getValidRiskSettings(value: Partial<RiskSettings> | undefined): RiskSet
 function createDefaultAtlasState(): AtlasSimulationState {
   return {
     currentBalance: ATLAS_DEFAULT_BALANCE,
+    dailySignalCount: 0,
+    dailySignalDay: getTodayKey(),
     dailyTradeCount: 0,
     dailyTradeDay: getTodayKey(),
     lastSignalTime: null,
@@ -284,11 +307,15 @@ function parseStoredAtlasState(storedValue: string | null): AtlasSimulationState
       ? (parsed.pair as AtlasPair)
       : 'SGEN/USDC';
     const status = parsed.status === 'running' || parsed.status === 'paused' ? parsed.status : 'idle';
+    const dailySignalDay = typeof parsed.dailySignalDay === 'string' ? parsed.dailySignalDay : getTodayKey();
+    const dailySignalCount = dailySignalDay === getTodayKey() ? Number(parsed.dailySignalCount) || 0 : 0;
     const dailyTradeDay = typeof parsed.dailyTradeDay === 'string' ? parsed.dailyTradeDay : getTodayKey();
     const dailyTradeCount = dailyTradeDay === getTodayKey() ? Number(parsed.dailyTradeCount) || 0 : 0;
 
     return {
       currentBalance: Number(parsed.currentBalance) || startingBalance + totalProfitLoss,
+      dailySignalCount,
+      dailySignalDay: getTodayKey(),
       dailyTradeCount,
       dailyTradeDay: getTodayKey(),
       lastSignalTime: typeof parsed.lastSignalTime === 'number' ? parsed.lastSignalTime : null,
@@ -302,6 +329,33 @@ function parseStoredAtlasState(storedValue: string | null): AtlasSimulationState
     };
   } catch {
     return createDefaultAtlasState();
+  }
+}
+
+function parseStoredSignalHistory(storedValue: string | null): SignalHistoryEntry[] {
+  if (!storedValue) return [];
+
+  try {
+    const parsed = JSON.parse(storedValue);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter((entry): entry is Partial<SignalHistoryEntry> => Boolean(entry) && typeof entry === 'object')
+      .map((entry) => ({
+        confidence: Math.max(0, Math.min(100, Number(entry.confidence) || 0)),
+        id: typeof entry.id === 'string' ? entry.id : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        pair: ATLAS_PAIRS.includes(entry.pair as AtlasPair) ? (entry.pair as AtlasPair) : 'SGEN/USDC',
+        priceSource: typeof entry.priceSource === 'string' ? entry.priceSource : 'Unknown',
+        reason: typeof entry.reason === 'string' ? entry.reason : 'Atlas strategy signal',
+        signal: entry.signal === 'BUY' || entry.signal === 'SELL' || entry.signal === 'HOLD' ? entry.signal : 'HOLD',
+        strategy: ATLAS_STRATEGIES.includes(entry.strategy as BotStrategy)
+          ? (entry.strategy as BotStrategy)
+          : 'Buy the Dip',
+        time: typeof entry.time === 'string' ? entry.time : new Date().toISOString(),
+      }))
+      .slice(0, 50);
+  } catch {
+    return [];
   }
 }
 
@@ -397,7 +451,7 @@ function evaluateStrategySignal(
   strategy: BotStrategy,
   marketSnapshot: MarketSnapshot,
   riskSettings: RiskSettings,
-  dailyTradeCount: number,
+  dailySignalCount: number,
   lastSignalTime: number | null,
 ): StrategySignal {
   const now = Date.now();
@@ -405,21 +459,23 @@ function evaluateStrategySignal(
     ? Math.max(0, riskSettings.cooldownSeconds - Math.floor((now - lastSignalTime) / 1000))
     : 0;
 
-  if (dailyTradeCount >= riskSettings.dailyMaxTrades) {
+  if (dailySignalCount >= riskSettings.dailyMaxSignals) {
     return {
       action: 'HOLD',
+      blocked: true,
       confidence: 84,
       lastUpdated: marketSnapshot.updatedAt,
-      reason: `Daily max paper trades reached (${riskSettings.dailyMaxTrades}).`,
+      reason: ATLAS_SAFETY_BLOCKED_MESSAGE,
     };
   }
 
   if (cooldownRemaining > 0) {
     return {
       action: 'HOLD',
+      blocked: true,
       confidence: 72,
       lastUpdated: marketSnapshot.updatedAt,
-      reason: `Cooldown active for ${cooldownRemaining}s before the next signal can trigger.`,
+      reason: ATLAS_SAFETY_BLOCKED_MESSAGE,
     };
   }
 
@@ -474,9 +530,9 @@ function evaluateStrategySignal(
   if (strategy === 'Dollar-Cost Average') {
     return {
       action: 'BUY',
-      confidence: clampConfidence(56 + Math.min(20, riskSettings.dailyMaxTrades - dailyTradeCount)),
+      confidence: clampConfidence(56 + Math.min(20, riskSettings.dailyMaxSignals - dailySignalCount)),
       lastUpdated: marketSnapshot.updatedAt,
-      reason: `DCA rule is active for ${marketSnapshot.pair}; paper execution respects cooldown and daily trade limits.`,
+      reason: `DCA rule is active for ${marketSnapshot.pair}; paper execution respects cooldown and daily signal limits.`,
     };
   }
 
@@ -503,6 +559,46 @@ function evaluateStrategySignal(
     confidence: 55,
     lastUpdated: marketSnapshot.updatedAt,
     reason: `Momentum is neutral at ${change.toFixed(2)}%.`,
+  };
+}
+
+function createSignalHistoryEntry(
+  simulation: AtlasSimulationState,
+  marketSnapshot: MarketSnapshot,
+  signal: StrategySignal,
+): SignalHistoryEntry {
+  return {
+    confidence: signal.confidence,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    pair: simulation.pair,
+    priceSource: marketSnapshot.priceSource,
+    reason: signal.reason,
+    signal: signal.action,
+    strategy: simulation.selectedStrategy,
+    time: signal.lastUpdated || new Date().toISOString(),
+  };
+}
+
+function recordSignalOnSimulation(
+  simulation: AtlasSimulationState,
+  signal: StrategySignal,
+): AtlasSimulationState {
+  const todayKey = getTodayKey();
+  const dailySignalCount = simulation.dailySignalDay === todayKey ? simulation.dailySignalCount : 0;
+
+  if (signal.blocked) {
+    return {
+      ...simulation,
+      dailySignalCount,
+      dailySignalDay: todayKey,
+    };
+  }
+
+  return {
+    ...simulation,
+    dailySignalCount: dailySignalCount + 1,
+    dailySignalDay: todayKey,
+    lastSignalTime: Date.now(),
   };
 }
 
@@ -542,11 +638,10 @@ function advanceSimulation(
   marketSnapshot: MarketSnapshot,
   signal: StrategySignal,
 ): AtlasSimulationState {
-  if (signal.action === 'HOLD') return simulation;
+  if (signal.blocked || signal.action === 'HOLD') return simulation;
 
   const todayKey = getTodayKey();
   const dailyTradeCount = simulation.dailyTradeDay === todayKey ? simulation.dailyTradeCount : 0;
-  if (dailyTradeCount >= simulation.riskSettings.dailyMaxTrades) return simulation;
 
   const nextTrade = createSimulatedTrade(
     {
@@ -564,7 +659,6 @@ function advanceSimulation(
     currentBalance: Number((simulation.startingBalance + totalProfitLoss).toFixed(2)),
     dailyTradeCount: dailyTradeCount + 1,
     dailyTradeDay: todayKey,
-    lastSignalTime: Date.now(),
     totalProfitLoss,
     trades: [nextTrade, ...simulation.trades].slice(0, 25),
   };
@@ -591,6 +685,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
   const [simulation, setSimulation] = useState<AtlasSimulationState>(() => createDefaultAtlasState());
   const [marketSnapshot, setMarketSnapshot] = useState<MarketSnapshot>(() => createDefaultMarketSnapshot());
   const marketSnapshotRef = useRef<MarketSnapshot>(createDefaultMarketSnapshot());
+  const [signalHistory, setSignalHistory] = useState<SignalHistoryEntry[]>([]);
   const [strategySignal, setStrategySignal] = useState<StrategySignal>({
     action: 'HOLD',
     confidence: 50,
@@ -606,6 +701,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
     const defaultSnapshot = createDefaultMarketSnapshot(parsedSimulation.pair);
     marketSnapshotRef.current = defaultSnapshot;
     setMarketSnapshot(defaultSnapshot);
+    setSignalHistory(parseStoredSignalHistory(window.localStorage.getItem(getAtlasSignalHistoryStorageKey(walletAddress))));
   }, [walletAddress]);
 
   useEffect(() => {
@@ -613,6 +709,12 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
 
     window.localStorage.setItem(getAtlasStorageKey(walletAddress), JSON.stringify(simulation));
   }, [simulation, walletAddress]);
+
+  useEffect(() => {
+    if (!walletAddress) return;
+
+    window.localStorage.setItem(getAtlasSignalHistoryStorageKey(walletAddress), JSON.stringify(signalHistory));
+  }, [signalHistory, walletAddress]);
 
   useEffect(() => {
     let cancelled = false;
@@ -625,7 +727,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
           simulation.selectedStrategy,
           snapshot,
           simulation.riskSettings,
-          simulation.dailyTradeDay === getTodayKey() ? simulation.dailyTradeCount : 0,
+          simulation.dailySignalDay === getTodayKey() ? simulation.dailySignalCount : 0,
           simulation.lastSignalTime,
         );
 
@@ -640,7 +742,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
           simulation.selectedStrategy,
           snapshot,
           simulation.riskSettings,
-          simulation.dailyTradeDay === getTodayKey() ? simulation.dailyTradeCount : 0,
+          simulation.dailySignalDay === getTodayKey() ? simulation.dailySignalCount : 0,
           simulation.lastSignalTime,
         );
 
@@ -661,6 +763,8 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
   }, [
     simulation.dailyTradeCount,
     simulation.dailyTradeDay,
+    simulation.dailySignalCount,
+    simulation.dailySignalDay,
     simulation.lastSignalTime,
     simulation.pair,
     simulation.riskSettings,
@@ -677,11 +781,15 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
           current.selectedStrategy,
           marketSnapshot,
           current.riskSettings,
-          current.dailyTradeDay === getTodayKey() ? current.dailyTradeCount : 0,
+          current.dailySignalDay === getTodayKey() ? current.dailySignalCount : 0,
           current.lastSignalTime,
         );
         setStrategySignal(currentSignal);
-        return advanceSimulation(current, marketSnapshot, currentSignal);
+        setSignalHistory((history) => [
+          createSignalHistoryEntry(current, marketSnapshot, currentSignal),
+          ...history,
+        ].slice(0, 50));
+        return advanceSimulation(recordSignalOnSimulation(current, currentSignal), marketSnapshot, currentSignal);
       });
     }, 4500);
 
@@ -717,7 +825,21 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
   }
 
   function startSimulation() {
-    setSimulation((current) => advanceSimulation({ ...current, status: 'running' }, marketSnapshot, strategySignal));
+    setSimulation((current) => {
+      const currentSignal = evaluateStrategySignal(
+        current.selectedStrategy,
+        marketSnapshot,
+        current.riskSettings,
+        current.dailySignalDay === getTodayKey() ? current.dailySignalCount : 0,
+        current.lastSignalTime,
+      );
+      setStrategySignal(currentSignal);
+      setSignalHistory((history) => [
+        createSignalHistoryEntry(current, marketSnapshot, currentSignal),
+        ...history,
+      ].slice(0, 50));
+      return advanceSimulation(recordSignalOnSimulation({ ...current, status: 'running' }, currentSignal), marketSnapshot, currentSignal);
+    });
   }
 
   function pauseSimulation() {
@@ -875,13 +997,13 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
           />
         </label>
         <label className={styles.botField}>
-          <span>Daily max trades</span>
+          <span>Daily max signals</span>
           <input
             min="1"
             step="1"
             type="number"
-            value={simulation.riskSettings.dailyMaxTrades}
-            onChange={(event) => updateRiskSetting('dailyMaxTrades', event.target.value)}
+            value={simulation.riskSettings.dailyMaxSignals}
+            onChange={(event) => updateRiskSetting('dailyMaxSignals', event.target.value)}
           />
         </label>
       </div>
@@ -902,10 +1024,14 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
           <strong>{simulation.status === 'running' ? 'Running' : simulation.status === 'paused' ? 'Paused' : 'Idle'}</strong>
         </div>
         <div className={styles.botStat}>
-          <span>Paper trades today</span>
-          <strong>{simulation.dailyTradeDay === getTodayKey() ? simulation.dailyTradeCount : 0} / {simulation.riskSettings.dailyMaxTrades}</strong>
+          <span>Signals today</span>
+          <strong>{simulation.dailySignalDay === getTodayKey() ? simulation.dailySignalCount : 0} / {simulation.riskSettings.dailyMaxSignals}</strong>
         </div>
       </div>
+
+      {strategySignal.blocked ? (
+        <div className={styles.safetyBlocked}>{ATLAS_SAFETY_BLOCKED_MESSAGE}</div>
+      ) : null}
 
       <div className={styles.botButtons}>
         <button className={styles.claimButton} type="button" onClick={startSimulation} disabled={simulation.status === 'running'}>
@@ -926,6 +1052,45 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
         >
           Manual Trade
         </a>
+      </div>
+
+      <div className={styles.tradeLog}>
+        <div className={styles.tradeLogHeader}>
+          <div className="brand-kicker">Signal History</div>
+          <span>{signalHistory.length} saved signals</span>
+        </div>
+        {signalHistory.length > 0 ? (
+          <div className={styles.tableWrap}>
+            <table className={`${styles.tradeTable} ${styles.signalHistoryTable}`}>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Pair</th>
+                  <th>Strategy</th>
+                  <th>Signal</th>
+                  <th>Confidence %</th>
+                  <th>Reason</th>
+                  <th>Price source</th>
+                </tr>
+              </thead>
+              <tbody>
+                {signalHistory.map((entry) => (
+                  <tr key={entry.id}>
+                    <td>{formatTradeDate(entry.time)}</td>
+                    <td>{entry.pair}</td>
+                    <td>{entry.strategy}</td>
+                    <td>{entry.signal}</td>
+                    <td>{entry.confidence}%</td>
+                    <td>{entry.reason}</td>
+                    <td>{entry.priceSource}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className={styles.emptyLog}>Start the simulator to save BUY, SELL, and HOLD signals locally for this wallet.</div>
+        )}
       </div>
 
       <div className={styles.tradeLog}>
