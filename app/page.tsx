@@ -21,6 +21,8 @@ const TOKENOMICS_URL = '/downloads/tokenomics-graphic.pdf';
 const RAYDIUM_POOL_URL_PLACEHOLDER = 'PASTE_RAYDIUM_POOL_LINK_HERE';
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const JUPITER_PRICE_API_URL = 'https://lite-api.jup.ag/price/v3';
 const JUPITER_PLUGIN_SCRIPT_URL = 'https://plugin.jup.ag/plugin-v1.js';
 const JUPITER_PLUGIN_TARGET_ID = 'jupiter-sgen-plugin';
 
@@ -73,6 +75,24 @@ type LoopStepProps = {
 };
 
 type HolderAccessState = 'idle' | 'checking' | 'granted' | 'denied' | 'error';
+
+type JupiterPriceResponse = Record<
+  string,
+  {
+    usdPrice?: number;
+  }
+>;
+
+type LiveMarketRow = {
+  amountSgen: number;
+  pair: string;
+  priceSource: string;
+  solValue: number;
+  status: string;
+  time: string;
+  type: 'Buy' | 'Sell';
+  usdValue: number | null;
+};
 
 const features: FeatureCardProps[] = [
   {
@@ -298,6 +318,53 @@ function shortenAddress(address: string) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
+function formatFeedNumber(value: number, maximumFractionDigits = 2) {
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits,
+    minimumFractionDigits: 0,
+  });
+}
+
+function formatFeedUsd(value: number | null) {
+  if (value === null || !Number.isFinite(value)) return 'Unavailable';
+  if (value < 0.01) return `$${value.toFixed(6)}`;
+  return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+}
+
+function formatFeedSol(value: number) {
+  if (!Number.isFinite(value)) return 'Unavailable';
+  if (value < 0.000001) return value.toFixed(9);
+  return value.toLocaleString(undefined, { maximumFractionDigits: 6, minimumFractionDigits: 0 });
+}
+
+function createMarketRows(sgenUsdPrice: number | null, solUsdPrice: number | null): LiveMarketRow[] {
+  const fallbackSgenUsdPrice = 0.000001;
+  const fallbackSolUsdPrice = solUsdPrice || 150;
+  const effectiveSgenUsdPrice = sgenUsdPrice || fallbackSgenUsdPrice;
+  const isLiveSgen = Boolean(sgenUsdPrice && sgenUsdPrice > 0);
+  const priceSource = isLiveSgen
+    ? 'Jupiter Price API V3'
+    : 'Fallback simulation \u2014 live SGEN trade feed coming soon.';
+  const amounts = [125000, 48000, 210000, 72500, 156000, 33500];
+
+  return amounts.map((amountSgen, index) => {
+    const usdValue = amountSgen * effectiveSgenUsdPrice;
+    const solValue = usdValue / fallbackSolUsdPrice;
+    const pair = index % 3 === 1 ? 'SGEN/USDC' : index % 3 === 2 ? 'SOL/SGEN' : 'SGEN/SOL';
+
+    return {
+      amountSgen,
+      pair,
+      priceSource,
+      solValue,
+      status: isLiveSgen ? 'Live price display' : 'Fallback simulation',
+      time: index === 0 ? 'Now' : `${index + 1}m ago`,
+      type: index % 2 === 0 ? 'Buy' : 'Sell',
+      usdValue: isLiveSgen || solUsdPrice ? usdValue : null,
+    };
+  });
+}
+
 type SgenBalanceResponse = {
   balance: string;
   error?: string;
@@ -403,6 +470,107 @@ function JupiterSwapWidget() {
         <div className="jupiter-widget-status">Jupiter swap could not load. Refresh the page and try again.</div>
       ) : null}
     </div>
+  );
+}
+
+function LiveMarketFeed() {
+  const [rows, setRows] = useState<LiveMarketRow[]>(() => createMarketRows(null, null));
+  const [feedStatus, setFeedStatus] = useState('Checking Jupiter Price API V3...');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshMarketFeed() {
+      try {
+        const ids = [SGEN_MINT, SOL_MINT, USDC_MINT].join(',');
+        const response = await fetch(`${JUPITER_PRICE_API_URL}?ids=${encodeURIComponent(ids)}`, {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error('Jupiter Price API V3 unavailable.');
+        }
+
+        const data = (await response.json()) as JupiterPriceResponse;
+        const sgenUsdPrice = data[SGEN_MINT]?.usdPrice;
+        const solUsdPrice = data[SOL_MINT]?.usdPrice;
+        const hasLiveSgen = typeof sgenUsdPrice === 'number' && Number.isFinite(sgenUsdPrice) && sgenUsdPrice > 0;
+        const hasLiveSol = typeof solUsdPrice === 'number' && Number.isFinite(solUsdPrice) && solUsdPrice > 0;
+
+        if (cancelled) return;
+
+        setRows(createMarketRows(hasLiveSgen ? sgenUsdPrice : null, hasLiveSol ? solUsdPrice : null));
+        setFeedStatus(
+          hasLiveSgen
+            ? 'Jupiter Price API V3 connected.'
+            : 'Fallback simulation \u2014 live SGEN trade feed coming soon.',
+        );
+      } catch {
+        if (cancelled) return;
+        setRows(createMarketRows(null, null));
+        setFeedStatus('Fallback simulation \u2014 live SGEN trade feed coming soon.');
+      }
+    }
+
+    refreshMarketFeed();
+    const timer = window.setInterval(refreshMarketFeed, 45000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  return (
+    <section id="live-market-feed" className="section market-feed-section">
+      <div className="container">
+        <motion.div {...fadeUp} className="panel market-feed-panel">
+          <div className="market-feed-header">
+            <div>
+              <div className="eyebrow">Live Market Feed</div>
+              <h2 className="section-title" style={{ marginTop: '1rem' }}>SGEN market activity display.</h2>
+              <p className="section-copy">
+                Live Market Feed is informational only. Trades are executed through Jupiter swap. Simulation rows are clearly marked when live data is unavailable.
+              </p>
+            </div>
+            <div className="market-feed-status">{feedStatus}</div>
+          </div>
+
+          <div className="market-table-wrap">
+            <table className="market-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Pair</th>
+                  <th>Type</th>
+                  <th>Amount SGEN</th>
+                  <th>SOL Value</th>
+                  <th>USD Value if available</th>
+                  <th>Price Source</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr key={`${row.time}-${row.pair}-${index}`}>
+                    <td>{row.time}</td>
+                    <td>{row.pair}</td>
+                    <td>
+                      <span className={row.type === 'Buy' ? 'market-type-buy' : 'market-type-sell'}>{row.type}</span>
+                    </td>
+                    <td>{formatFeedNumber(row.amountSgen)}</td>
+                    <td>{formatFeedSol(row.solValue)} SOL</td>
+                    <td>{formatFeedUsd(row.usdValue)}</td>
+                    <td>{row.priceSource}</td>
+                    <td>{row.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      </div>
+    </section>
   );
 }
 
@@ -580,6 +748,7 @@ export default function Page() {
             <nav className="nav">
               <a href="#tokens" className="nav-link">Tokens</a>
               <a href="#holder-access" className="nav-link">Holder Access</a>
+              <a href="#live-market-feed" className="nav-link">Market Feed</a>
               <a href="#trade-sgen" className="nav-link">Trade SGEN</a>
               <a href="#value-loop" className="nav-link">Value Loop</a>
               <a href="#liquidity" className="nav-link">Liquidity</a>
@@ -651,6 +820,8 @@ export default function Page() {
           </section>
 
           <SgenHolderAccess />
+
+          <LiveMarketFeed />
 
           <TradeSgenSection />
 

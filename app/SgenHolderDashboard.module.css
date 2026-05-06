@@ -4,10 +4,11 @@
 
 .dashboard {
   padding: 1.6rem;
-  border-color: rgba(251,191,36,0.22);
+  border-color: rgba(103,232,249,0.18);
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.045), rgba(251,191,36,0.08)),
-    rgba(0,0,0,0.16);
+    linear-gradient(135deg, rgba(103,232,249,0.06), rgba(251,191,36,0.08)),
+    rgba(2,6,23,0.56);
+  box-shadow: 0 28px 80px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
 .header {
@@ -26,7 +27,7 @@
 .pill {
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 9999px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(2,6,23,0.54);
   color: var(--gold-soft);
   font-size: 0.85rem;
   font-weight: 700;
@@ -55,7 +56,7 @@
 .zoneCard {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
-  background: rgba(0,0,0,0.14);
+  background: rgba(2,6,23,0.42);
   padding: 1.05rem;
 }
 
@@ -81,7 +82,7 @@
 .tierItem {
   border: 1px solid rgba(251,191,36,0.12);
   border-radius: 14px;
-  background: rgba(251,191,36,0.06);
+  background: linear-gradient(135deg, rgba(251,191,36,0.08), rgba(103,232,249,0.035));
   padding: 1.05rem;
 }
 
@@ -107,7 +108,7 @@
   margin-top: 1.25rem;
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
-  background: rgba(0,0,0,0.14);
+  background: rgba(2,6,23,0.42);
   padding: 1.15rem;
 }
 
@@ -136,7 +137,7 @@
 .ledgerItem {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.045);
   padding: 0.9rem;
 }
 
@@ -160,7 +161,7 @@
   margin-top: 1.25rem;
   border: 1px solid rgba(251,191,36,0.14);
   border-radius: 14px;
-  background: rgba(251,191,36,0.06);
+  background: linear-gradient(135deg, rgba(251,191,36,0.08), rgba(103,232,249,0.035));
   padding: 1.1rem;
 }
 
@@ -178,7 +179,7 @@
 .claimButton {
   border: 1px solid rgba(251,191,36,0.30);
   border-radius: 9999px;
-  background: rgba(251,191,36,0.12);
+  background: linear-gradient(135deg, rgba(251,191,36,0.22), rgba(103,232,249,0.07));
   color: #fef3c7;
   cursor: pointer;
   font: inherit;
@@ -188,7 +189,7 @@
 }
 
 .claimButton:hover:not(:disabled) {
-  background: rgba(251,191,36,0.20);
+  background: linear-gradient(135deg, rgba(251,191,36,0.30), rgba(103,232,249,0.10));
 }
 
 .claimButton:disabled {
@@ -209,11 +210,11 @@
 
 .bot {
   margin-top: 1.35rem;
-  border: 1px solid rgba(251,191,36,0.14);
+  border: 1px solid rgba(103,232,249,0.16);
   border-radius: 14px;
   background:
-    linear-gradient(135deg, rgba(251,191,36,0.06), rgba(255,255,255,0.025)),
-    rgba(0,0,0,0.18);
+    linear-gradient(135deg, rgba(103,232,249,0.07), rgba(251,191,36,0.055)),
+    rgba(2,6,23,0.54);
   padding: 1.15rem;
 }
 
@@ -225,10 +226,10 @@
 }
 
 .botNotice {
-  border: 1px solid rgba(251,191,36,0.16);
+  border: 1px solid rgba(103,232,249,0.16);
   border-radius: 9999px;
-  background: rgba(251,191,36,0.08);
-  color: #fef3c7;
+  background: rgba(103,232,249,0.08);
+  color: #cffafe;
   font-size: 0.82rem;
   font-weight: 700;
   padding: 0.55rem 0.8rem;
@@ -246,7 +247,7 @@
 .priceItem {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.045);
   padding: 0.9rem;
 }
 
@@ -293,7 +294,7 @@
 .botStat {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.045);
   padding: 0.9rem;
 }
 
@@ -310,7 +311,7 @@
   width: 100%;
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 10px;
-  background: rgba(5,7,11,0.86);
+  background: rgba(2,6,23,0.90);
   color: #e2e8f0;
   font: inherit;
   min-height: 2.65rem;
@@ -340,7 +341,7 @@
 .secondaryButton {
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 9999px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.055);
   color: #e2e8f0;
   cursor: pointer;
   font: inherit;
@@ -350,7 +351,8 @@
 }
 
 .secondaryButton:hover:not(:disabled) {
-  background: rgba(255,255,255,0.10);
+  border-color: rgba(103,232,249,0.18);
+  background: rgba(103,232,249,0.08);
 }
 
 .secondaryButton:disabled {
@@ -376,7 +378,7 @@
   overflow-x: auto;
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
-  background: rgba(0,0,0,0.12);
+  background: rgba(2,6,23,0.46);
 }
 
 .tradeTable {
@@ -395,7 +397,7 @@
 }
 
 .tradeTable th {
-  color: var(--gold-soft);
+  color: #cffafe;
   font-size: 0.75rem;
   text-transform: uppercase;
 }
