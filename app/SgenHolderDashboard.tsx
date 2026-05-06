@@ -35,6 +35,7 @@ type HolderTier = {
 };
 
 type AtlasPair = 'SOL/USDC' | 'SGEN/SOL' | 'SGEN/USDC';
+type AtlasMode = 'simulation' | 'liveSignal';
 type BotStrategy = 'Buy the Dip' | 'Take Profit' | 'Dollar-Cost Average' | 'Momentum';
 type BotStatus = 'idle' | 'running' | 'paused';
 type TradeAction = 'Buy' | 'Sell';
@@ -98,6 +99,7 @@ type AtlasSimulationState = {
   dailyTradeCount: number;
   dailyTradeDay: string;
   lastSignalTime: number | null;
+  mode: AtlasMode;
   pair: AtlasPair;
   riskSettings: RiskSettings;
   selectedStrategy: BotStrategy;
@@ -280,6 +282,7 @@ function createDefaultAtlasState(): AtlasSimulationState {
     dailyTradeCount: 0,
     dailyTradeDay: getTodayKey(),
     lastSignalTime: null,
+    mode: 'simulation',
     pair: 'SGEN/USDC',
     riskSettings: ATLAS_DEFAULT_RISK_SETTINGS,
     selectedStrategy: 'Buy the Dip',
@@ -312,6 +315,7 @@ function parseStoredAtlasState(storedValue: string | null): AtlasSimulationState
     const dailySignalCount = dailySignalDay === getTodayKey() ? Number(parsed.dailySignalCount) || 0 : 0;
     const dailyTradeDay = typeof parsed.dailyTradeDay === 'string' ? parsed.dailyTradeDay : getTodayKey();
     const dailyTradeCount = dailyTradeDay === getTodayKey() ? Number(parsed.dailyTradeCount) || 0 : 0;
+    const mode = parsed.mode === 'liveSignal' ? 'liveSignal' : 'simulation';
 
     return {
       currentBalance: Number(parsed.currentBalance) || startingBalance + totalProfitLoss,
@@ -320,6 +324,7 @@ function parseStoredAtlasState(storedValue: string | null): AtlasSimulationState
       dailyTradeCount,
       dailyTradeDay: getTodayKey(),
       lastSignalTime: typeof parsed.lastSignalTime === 'number' ? parsed.lastSignalTime : null,
+      mode,
       pair,
       riskSettings: getValidRiskSettings(parsed.riskSettings),
       selectedStrategy,
@@ -710,6 +715,10 @@ function formatTradeDate(value: string) {
   }).format(new Date(value));
 }
 
+function getAtlasModeLabel(mode: AtlasMode) {
+  return mode === 'liveSignal' ? 'Live Signal Mode' : 'Simulation Mode';
+}
+
 function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
   const [simulation, setSimulation] = useState<AtlasSimulationState>(() => createDefaultAtlasState());
   const [marketSnapshot, setMarketSnapshot] = useState<MarketSnapshot>(() => createDefaultMarketSnapshot());
@@ -817,7 +826,10 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
         setSignalHistory((history) =>
           addSignalHistoryEntry(history, createSignalHistoryEntry(current, marketSnapshot, currentSignal)),
         );
-        return advanceSimulation(recordSignalOnSimulation(current, currentSignal), marketSnapshot, currentSignal);
+        const nextSimulation = recordSignalOnSimulation(current, currentSignal);
+        return current.mode === 'liveSignal'
+          ? nextSimulation
+          : advanceSimulation(nextSimulation, marketSnapshot, currentSignal);
       });
     }, 4500);
 
@@ -852,6 +864,14 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
     setMarketSnapshot(defaultSnapshot);
   }
 
+  function updateMode(mode: AtlasMode) {
+    setSimulation((current) => ({
+      ...current,
+      mode,
+      status: current.status === 'running' ? 'paused' : current.status,
+    }));
+  }
+
   function startSimulation() {
     setSimulation((current) => {
       const currentSignal = evaluateStrategySignal(
@@ -865,7 +885,10 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
       setSignalHistory((history) =>
         addSignalHistoryEntry(history, createSignalHistoryEntry(current, marketSnapshot, currentSignal)),
       );
-      return advanceSimulation(recordSignalOnSimulation({ ...current, status: 'running' }, currentSignal), marketSnapshot, currentSignal);
+      const nextSimulation = recordSignalOnSimulation({ ...current, status: 'running' }, currentSignal);
+      return current.mode === 'liveSignal'
+        ? nextSimulation
+        : advanceSimulation(nextSimulation, marketSnapshot, currentSignal);
     });
   }
 
@@ -881,6 +904,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
         ...createDefaultAtlasState(),
         currentBalance: startingBalance,
         pair: current.pair,
+        mode: current.mode,
         riskSettings: current.riskSettings,
         selectedStrategy: current.selectedStrategy,
         startingBalance,
@@ -927,6 +951,53 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
           <small>{marketFeedStatus}</small>
         </div>
       </div>
+
+      <div className={styles.modePanel}>
+        <div>
+          <span>Atlas mode</span>
+          <strong>{getAtlasModeLabel(simulation.mode)}</strong>
+          <small>
+            {simulation.mode === 'liveSignal'
+              ? 'Live Signal + Manual Approval keeps signals live and routes every real trade to Jupiter for wallet approval.'
+              : 'Simulation Mode records paper trades only and never submits blockchain transactions.'}
+          </small>
+        </div>
+        <div className={styles.modeToggle} aria-label="Atlas trading mode">
+          <button
+            className={simulation.mode === 'simulation' ? styles.activeModeButton : ''}
+            type="button"
+            onClick={() => updateMode('simulation')}
+          >
+            Simulation Mode
+          </button>
+          <button
+            className={simulation.mode === 'liveSignal' ? styles.activeModeButton : ''}
+            type="button"
+            onClick={() => updateMode('liveSignal')}
+          >
+            Live Signal Mode
+          </button>
+        </div>
+      </div>
+
+      {simulation.mode === 'liveSignal' ? (
+        <div className={styles.liveApprovalPanel}>
+          <div>
+            <div className="brand-kicker">Live Signal + Manual Approval</div>
+            <strong>Atlas does not auto-trade. You approve every trade manually.</strong>
+            <p>Low liquidity may cause failed trades or poor pricing.</p>
+          </div>
+          <a
+            className={styles.claimButton}
+            href="/#trade-sgen"
+            target="_blank"
+            rel="noreferrer"
+            title={`Open Jupiter swap for manual ${simulation.pair} trading where routes are available`}
+          >
+            Open Jupiter Trade
+          </a>
+        </div>
+      ) : null}
 
       <div className={styles.priceFeed}>
         <div>
@@ -1065,7 +1136,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
         </div>
         <div className={styles.botStat}>
           <span>Status</span>
-          <strong>{simulation.status === 'running' ? 'Running' : simulation.status === 'paused' ? 'Paused' : 'Idle'}</strong>
+          <strong>{simulation.status === 'running' ? `Running ${getAtlasModeLabel(simulation.mode)}` : simulation.status === 'paused' ? 'Paused' : 'Idle'}</strong>
         </div>
         <div className={styles.botStat}>
           <span>Signals today</span>
@@ -1079,7 +1150,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
 
       <div className={styles.botButtons}>
         <button className={styles.claimButton} type="button" onClick={startSimulation} disabled={simulation.status === 'running'}>
-          Start Simulation
+          {simulation.mode === 'liveSignal' ? 'Start Live Signals' : 'Start Simulation'}
         </button>
         <button className={styles.secondaryButton} type="button" onClick={pauseSimulation} disabled={simulation.status !== 'running'}>
           Pause Simulation
@@ -1094,7 +1165,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
           rel="noreferrer"
           title={`Open Jupiter swap for manual ${simulation.pair} trading where routes are available`}
         >
-          Manual Trade
+          Open Jupiter Trade
         </a>
       </div>
 
@@ -1133,7 +1204,7 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
             </table>
           </div>
         ) : (
-          <div className={styles.emptyLog}>Start the simulator to save BUY, SELL, and HOLD signals locally for this wallet.</div>
+          <div className={styles.emptyLog}>Start Atlas to save BUY, SELL, and HOLD signals locally for this wallet.</div>
         )}
       </div>
 
@@ -1180,7 +1251,11 @@ function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
             </table>
           </div>
         ) : (
-          <div className={styles.emptyLog}>Start the simulator to log paper trades from Atlas strategy signals. No blockchain transactions are submitted.</div>
+          <div className={styles.emptyLog}>
+            {simulation.mode === 'liveSignal'
+              ? 'Live Signal Mode does not create paper trades. Use Open Jupiter Trade to approve any real swap manually.'
+              : 'Start the simulator to log paper trades from Atlas strategy signals. No blockchain transactions are submitted.'}
+          </div>
         )}
       </div>
     </div>
