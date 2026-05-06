@@ -18,7 +18,6 @@ import {
 const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const DECK_URL = '/downloads/pitch-deck.pptx';
 const TOKENOMICS_URL = '/downloads/tokenomics-graphic.pdf';
-const RAYDIUM_POOL_URL_PLACEHOLDER = 'PASTE_RAYDIUM_POOL_LINK_HERE';
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -208,7 +207,7 @@ function ButtonLink({
 }
 
 
-function PendingTradeButton({
+function TradeJupiterButton({
   children,
   variant = 'gold',
 }: {
@@ -218,15 +217,15 @@ function PendingTradeButton({
   const className = variant === 'outline' ? 'button button-outline' : 'button button-gold';
 
   return (
-    <span
+    <a
       className={className}
-      role="button"
-      aria-disabled="true"
-      title="Final Raydium pool link pending"
-      style={{ opacity: 0.9, cursor: 'not-allowed' }}
+      href="/#trade-sgen"
+      target="_blank"
+      rel="noreferrer"
+      title="Open the Jupiter swap section"
     >
       {children}
-    </span>
+    </a>
   );
 }
 
@@ -958,26 +957,26 @@ export default function Page() {
             </div>
           </Section>
 
-          <Section id="liquidity" eyebrow="Liquidity" title="Raydium liquidity planned / in setup.">
+          <Section id="liquidity" eyebrow="Liquidity" title="Trading routes through Jupiter while Raydium liquidity is pending.">
             <p className="section-copy">
-              Initial SGEN liquidity is planned through a Raydium CPMM SGEN/SOL pool. The starting liquidity model is designed to begin small and controlled, with an initial test pool of 50,000 SGEN paired with 0.05 SOL. This creates an initial reference price of 0.000001 SOL per SGEN. Liquidity may be expanded gradually after pool creation, testing, and community review.
+              No confirmed active Raydium pool link is published for SGEN yet. Use the Jupiter swap section for available SGEN routes and always verify the official mint before trading.
             </p>
             <div className="card-grid" style={{ marginTop: '2.5rem' }}>
               <div className="panel card">
                 <div className="logo-inline">
                   <Wallet className="icon large gold" />
-                  <div className="card-title">Liquidity</div>
+                  <div className="card-title">Liquidity Status</div>
                 </div>
                 <p className="section-copy" style={{ marginTop: '1rem' }}>
-                  Initial SGEN liquidity is planned through a Raydium CPMM SGEN/SOL pool. The starting liquidity model is designed to begin small and controlled, with an initial test pool of 50,000 SGEN paired with 0.05 SOL. This creates an initial reference price of 0.000001 SOL per SGEN. Liquidity may be expanded gradually after pool creation, testing, and community review.
+                  Raydium liquidity remains planned / pending until an active pool URL is confirmed. The site does not show Raydium trading buttons without a verified pool.
                 </p>
                 <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
                   {[
-                    ['Status', 'Raydium liquidity planned / in setup.'],
+                    ['Status', 'No confirmed Raydium pool currently published.'],
                     ['Token', 'Satoshi Genesis (SGEN)'],
                     ['Network', 'Solana mainnet'],
                     ['SGEN mint address', SGEN_MINT],
-                    ['Raydium pool link', RAYDIUM_POOL_URL_PLACEHOLDER],
+                    ['Current trade route', 'Jupiter swap section'],
                   ].map(([label, value]) => (
                     <div key={label} className="token-item" style={{ alignItems: 'flex-start', gap: '1rem' }}>
                       <strong style={{ minWidth: '10.5rem', color: '#fde68a' }}>{label}</strong>
@@ -992,12 +991,12 @@ export default function Page() {
                   <div className="card-title">Trading Access</div>
                 </div>
                 <p className="section-copy" style={{ marginTop: '1rem' }}>
-                  Trading access is planned through Raydium once the CPMM SGEN/SOL pool is created, tested, and reviewed. The public pool link is still being finalized.
+                  Trade through the embedded Jupiter swap widget. If a confirmed Raydium pool is published later, the site can add the verified Raydium pool link then.
                 </p>
                 <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
                   {[
-                    ['Trade button', 'Trade SGEN on Raydium'],
-                    ['Pool link placeholder', RAYDIUM_POOL_URL_PLACEHOLDER],
+                    ['Trade button', 'Trade on Jupiter'],
+                    ['Raydium visibility', 'Hidden until an active pool is confirmed'],
                   ].map(([label, value]) => (
                     <div key={label} className="token-item" style={{ alignItems: 'flex-start', gap: '1rem' }}>
                       <strong style={{ minWidth: '10.5rem', color: '#fde68a' }}>{label}</strong>
@@ -1006,7 +1005,7 @@ export default function Page() {
                   ))}
                 </div>
                 <div style={{ marginTop: '1.5rem' }}>
-                  <PendingTradeButton>Trade SGEN on Raydium</PendingTradeButton>
+                  <TradeJupiterButton>Trade on Jupiter</TradeJupiterButton>
                 </div>
               </div>
             </div>
@@ -1030,7 +1029,7 @@ export default function Page() {
                 ['Phase 1', 'Foundation', 'Finalize brand identity, token names, litepaper, whitepaper, and contract scope.'],
                 ['Phase 2', 'Build', 'Deploy contracts in test environments and validate staking, emissions, burns, and treasury flow.'],
                 ['Phase 3', 'Community', 'Launch website, publish docs, open channels, and prepare public-facing materials.'],
-                ['Phase 4', 'Launch', 'Initial SGEN liquidity is planned through a Raydium CPMM SGEN/SOL pool. The starting liquidity model is designed to begin small and controlled, with an initial test pool of 50,000 SGEN paired with 0.05 SOL. This creates an initial reference price of 0.000001 SOL per SGEN. Liquidity may be expanded gradually after pool creation, testing, and community review.'],
+                ['Phase 4', 'Launch', 'Trade access routes through Jupiter while Raydium liquidity remains pending. Any Raydium pool link should only be shown after the active pool is confirmed.'],
               ].map(([phase, title, text]) => (
                 <div key={phase} className="panel card">
                   <div className="eyebrow">{phase}</div>
@@ -1066,7 +1065,7 @@ export default function Page() {
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <PendingTradeButton>Trade SGEN on Raydium</PendingTradeButton>
+                    <TradeJupiterButton>Trade on Jupiter</TradeJupiterButton>
                     <ButtonLink href={WHITEPAPER_URL} target="_blank">Read the Whitepaper</ButtonLink>
                     <ButtonLink href={DECK_URL} target="_blank" variant="outline">View the Deck</ButtonLink>
                   </div>
@@ -1078,7 +1077,7 @@ export default function Page() {
 
         <footer style={{ borderTop: '1px solid rgba(255,255,255,0.10)', background: 'rgba(0,0,0,0.20)' }}>
           <div className="container footer-links">
-            <PendingTradeButton variant="outline">Trade SGEN on Raydium</PendingTradeButton>
+            <TradeJupiterButton variant="outline">Trade on Jupiter</TradeJupiterButton>
             <ButtonLink href={WHITEPAPER_URL} target="_blank" variant="outline">Whitepaper PDF</ButtonLink>
             <ButtonLink href={DECK_URL} target="_blank" variant="outline">Pitch Deck</ButtonLink>
             <ButtonLink href={TOKENOMICS_URL} target="_blank" variant="outline">Tokenomics Graphic</ButtonLink>
@@ -1092,7 +1091,7 @@ export default function Page() {
               </div>
             </div>
             <div className="footer-note">
-              Working concept website for project presentation and planning. Raydium liquidity is planned / in setup. SGEN liquidity is experimental and early-stage, and users should always verify the official SGEN mint address before trading.
+              Working concept website for project presentation and planning. Raydium liquidity is not shown without a confirmed active pool. SGEN liquidity is experimental and early-stage, and users should always verify the official SGEN mint address before trading.
             </div>
           </div>
         </footer>
