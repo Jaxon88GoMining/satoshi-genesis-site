@@ -243,6 +243,66 @@
   margin-top: 1rem;
 }
 
+.signalPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.75fr) minmax(0, 1fr);
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.signalPanel > div {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.045);
+  padding: 1rem;
+}
+
+.signalPanel span {
+  display: block;
+  color: var(--soft);
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.signalPanel strong {
+  display: block;
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.signalPanel small,
+.priceFeed small {
+  display: block;
+  color: var(--soft);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  margin-top: 0.5rem;
+}
+
+.signalBadge {
+  border-radius: 9999px;
+  display: inline-flex !important;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0.45rem 0.7rem;
+  text-transform: uppercase;
+}
+
+.signalBuy {
+  background: rgba(74,222,128,0.10);
+  color: #86efac !important;
+}
+
+.signalSell {
+  background: rgba(248,113,113,0.10);
+  color: #fca5a5 !important;
+}
+
+.signalHold {
+  background: rgba(251,191,36,0.10);
+  color: #fde68a !important;
+}
+
 .priceFeed div,
 .priceItem {
   border: 1px solid rgba(255,255,255,0.08);
@@ -283,11 +343,16 @@
 }
 
 .botControls,
+.riskGrid,
 .botStats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0,1fr));
   gap: 0.9rem;
   margin-top: 1rem;
+}
+
+.riskGrid {
+  grid-template-columns: repeat(5, minmax(0,1fr));
 }
 
 .botField,
@@ -339,6 +404,9 @@
 }
 
 .secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 9999px;
   background: rgba(255,255,255,0.055);
@@ -383,7 +451,7 @@
 
 .tradeTable {
   width: 100%;
-  min-width: 760px;
+  min-width: 1060px;
   border-collapse: collapse;
   color: #e2e8f0;
   font-size: 0.84rem;
@@ -419,7 +487,9 @@
   .tierGrid,
   .priceFeed,
   .priceGrid,
+  .signalPanel,
   .botControls,
+  .riskGrid,
   .botStats,
   .ledgerGrid {
     grid-template-columns: 1fr;
