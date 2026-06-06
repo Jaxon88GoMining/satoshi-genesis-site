@@ -3,7 +3,7 @@
   "symbol": "SFUEL",
   "description": "Satoshi Fuel is the utility and reward token for the Satoshi Genesis ecosystem.",
   "mint": "6mNqWXFZfL7a16rt6TBn2gY8RwAk4bq28ZdW6csUoray",
-  "image": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo.png",
+  "image": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo-v2.png",
   "external_url": "https://satoshi-genesis-site.vercel.app/",
   "attributes": [
     {
@@ -35,7 +35,7 @@
     "category": "fungible",
     "files": [
       {
-        "uri": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo.png",
+        "uri": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo-v2.png",
         "type": "image/png"
       }
     ]

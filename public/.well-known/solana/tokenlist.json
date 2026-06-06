@@ -24,7 +24,7 @@
       "symbol": "SFUEL",
       "name": "Satoshi Fuel",
       "decimals": 6,
-      "logoURI": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo.png",
+      "logoURI": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo-v2.png",
       "tags": ["utility"],
       "extensions": {
         "website": "https://satoshi-genesis-site.vercel.app/",

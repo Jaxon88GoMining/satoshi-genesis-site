@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const TOKEN_JSON_URL = '/token/sfuel.json';
-const TOKEN_LOGO_URL = '/token/sfuel-logo.png';
+const TOKEN_LOGO_URL = '/token/sfuel-logo-v2.png';
 const SFUEL_MINT = '6mNqWXFZfL7a16rt6TBn2gY8RwAk4bq28ZdW6csUoray';
 const INACTIVE_SFUEL_MINT = '3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH';
 const SFUEL_SOLSCAN_URL = `https://solscan.io/token/${SFUEL_MINT}`;
@@ -213,7 +213,7 @@ export default function SFuelPage() {
                       View /token/sfuel.json
                     </a>
                     <a className="button button-outline" href={TOKEN_LOGO_URL} target="_blank" rel="noreferrer">
-                      View /token/sfuel-logo.png
+                      View /token/sfuel-logo-v2.png
                     </a>
                   </div>
                 </div>
