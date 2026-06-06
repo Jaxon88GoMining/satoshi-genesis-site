@@ -20,10 +20,10 @@
     },
     {
       "chainId": 101,
-      "address": "6mNqWXFZfL7a16rt6TBn2gY8RwAk4bq28ZdW6csUoray",
+      "address": "3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH",
       "symbol": "SFUEL",
       "name": "Satoshi Fuel",
-      "decimals": 6,
+      "decimals": 8,
       "logoURI": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo-v3.png",
       "tags": ["utility"],
       "extensions": {
