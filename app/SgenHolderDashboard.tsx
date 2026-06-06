@@ -1383,7 +1383,7 @@ export function SgenHolderDashboard() {
     window.localStorage.setItem(getClaimStorageKey(walletAddress), JSON.stringify(nextClaimLedger));
     setClaimLedger(nextClaimLedger);
     setNow(claimTime);
-    setClaimMessage('Rewards claimed (SFUEL coming soon)');
+    setClaimMessage('Rewards claimed (SFUEL ledger updated)');
   }
 
   return createPortal(
@@ -1443,7 +1443,7 @@ export function SgenHolderDashboard() {
                     <h3 className={styles.claimTitle}>SFUEL Rewards Ledger</h3>
                   </div>
                   <p className={styles.simulatedLabel}>
-                    Simulated rewards only {'\u2014'} real SFUEL distribution coming later.
+                    Simulated rewards only {'\u2014'} official SFUEL mint verified; distribution remains wallet-approved.
                   </p>
                 </div>
                 <div className={styles.ledgerGrid}>

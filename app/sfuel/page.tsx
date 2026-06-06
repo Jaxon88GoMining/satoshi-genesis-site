@@ -4,6 +4,8 @@ import Link from 'next/link';
 const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const TOKEN_JSON_URL = '/token/sfuel.json';
 const TOKEN_LOGO_URL = '/token/sfuel-logo.png';
+const SFUEL_MINT = '3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH';
+const SFUEL_SOLSCAN_URL = `https://solscan.io/token/${SFUEL_MINT}`;
 
 const utilityPoints = [
   'SGEN remains the core ecosystem asset for staking, governance, and long-term alignment.',
@@ -12,9 +14,9 @@ const utilityPoints = [
 ];
 
 const statusPoints = [
-  'Website preparation only. No mint address is published on this page yet.',
-  'SFUEL will be created manually on Solana mainnet through Raydium LaunchLab.',
-  'Liquidity details will only be published after the manual launch is complete and verified.',
+  `Official SFUEL mint verified: ${SFUEL_MINT}`,
+  'Liquidity launch remains pending until a confirmed pool is published.',
+  'Rejected candidate mints must not be used for SFUEL trading, rewards, or metadata.',
 ];
 
 export const metadata: Metadata = {
@@ -73,7 +75,10 @@ export default function SFuelPage() {
                 </p>
                 <div className="hero-actions">
                   <a className="button button-gold" href={TOKEN_JSON_URL} target="_blank" rel="noreferrer">
-                    Open Placeholder Metadata
+                    Open SFUEL Metadata
+                  </a>
+                  <a className="button button-outline" href={SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">
+                    View Mint on Solscan
                   </a>
                   <a className="button button-outline" href={TOKEN_LOGO_URL} target="_blank" rel="noreferrer">
                     Open Logo Path
@@ -93,7 +98,7 @@ export default function SFuelPage() {
                   </div>
                   <div className="panel metric">
                     <div className="metric-value">Mainnet</div>
-                    <div className="metric-label">Manual LaunchLab launch pending</div>
+                    <div className="metric-label">Official mint verified</div>
                   </div>
                 </div>
               </div>
@@ -109,10 +114,9 @@ export default function SFuelPage() {
                 </div>
                 <div className="panel-soft token-hero">
                   <div className="brand-kicker" style={{ color: '#94a3b8' }}>Current status</div>
-                  <div className="token-title" style={{ marginTop: '0.75rem' }}>Website ready, launch manual</div>
+                  <div className="token-title" style={{ marginTop: '0.75rem' }}>Official mint verified</div>
                   <p className="section-copy" style={{ marginTop: '0.75rem' }}>
-                    This page and the token metadata placeholder are live-ready website assets. Minting and liquidity are intentionally
-                    not created here in code.
+                    SFUEL has a verified Solana mainnet mint. Liquidity and trading details should only use confirmed official links.
                   </p>
                 </div>
               </div>
@@ -141,7 +145,7 @@ export default function SFuelPage() {
           <section className="section">
             <div className="container">
               <div className="eyebrow">Launch status</div>
-              <h2 className="section-title">Prepared for manual Raydium LaunchLab creation.</h2>
+              <h2 className="section-title">Official SFUEL mint verified. Liquidity remains pending.</h2>
               <div className="token-list" style={{ marginTop: '1.5rem' }}>
                 {statusPoints.map((point) => (
                   <div key={point} className="token-item">
@@ -159,11 +163,10 @@ export default function SFuelPage() {
                   <div>
                     <div className="eyebrow">Website assets</div>
                     <h2 className="section-title" style={{ marginTop: '1rem' }}>
-                      Placeholder metadata and branding are ready.
+                      Official metadata and branding are ready.
                     </h2>
                     <p className="section-copy">
-                      Use the placeholder metadata for website presentation now, then replace it with final verified mint details after the
-                      manual Solana mainnet launch is complete.
+                      Use the verified SFUEL mint and hosted metadata only. Rejected candidate mints should not be used.
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

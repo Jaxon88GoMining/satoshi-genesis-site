@@ -2,6 +2,7 @@
   "name": "Satoshi Fuel",
   "symbol": "SFUEL",
   "description": "Satoshi Fuel is the utility and reward token for the Satoshi Genesis ecosystem.",
+  "mint": "3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH",
   "image": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo.png",
   "external_url": "https://satoshi-genesis-site.vercel.app/",
   "attributes": [
@@ -10,12 +11,16 @@
       "value": "Solana mainnet"
     },
     {
+      "trait_type": "Official Mint",
+      "value": "3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH"
+    },
+    {
       "trait_type": "Role",
       "value": "Utility engine"
     },
     {
       "trait_type": "Supply",
-      "value": "2101000000"
+      "value": "2100000000"
     },
     {
       "trait_type": "Decimals",

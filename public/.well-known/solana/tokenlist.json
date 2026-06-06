@@ -17,6 +17,19 @@
         "tokenomics": "https://satoshi-genesis-site.vercel.app/downloads/tokenomics-graphic.pdf",
         "meteoraPool": "https://app.meteora.ag/dlmm/AvWn3ppCNaLDDKfN2rwY2Mhs5m34zGvM5PD18j5jTbVu"
       }
+    },
+    {
+      "chainId": 101,
+      "address": "3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH",
+      "symbol": "SFUEL",
+      "name": "Satoshi Fuel",
+      "decimals": 8,
+      "logoURI": "https://satoshi-genesis-site.vercel.app/token/sfuel-logo.png",
+      "tags": ["utility"],
+      "extensions": {
+        "website": "https://satoshi-genesis-site.vercel.app/",
+        "documentation": "https://satoshi-genesis-site.vercel.app/downloads/whitepaper.pdf"
+      }
     }
   ]
 }
