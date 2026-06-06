@@ -5,7 +5,9 @@ const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const TOKEN_JSON_URL = '/token/sfuel.json';
 const TOKEN_LOGO_URL = '/token/sfuel-logo.png';
 const SFUEL_MINT = '3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH';
+const REJECTED_SFUEL_MINT = '6mNqWXFZfL7a16rt6TBn2gY8RwAk4bq28ZdW6csUoray';
 const SFUEL_SOLSCAN_URL = `https://solscan.io/token/${SFUEL_MINT}`;
+const REJECTED_SFUEL_SOLSCAN_URL = `https://solscan.io/token/${REJECTED_SFUEL_MINT}`;
 
 const utilityPoints = [
   'SGEN remains the core ecosystem asset for staking, governance, and long-term alignment.',
@@ -146,12 +148,53 @@ export default function SFuelPage() {
             <div className="container">
               <div className="eyebrow">Launch status</div>
               <h2 className="section-title">Official SFUEL mint verified. Liquidity remains pending.</h2>
+              <p className="section-copy">
+                Some wallets may show more than one token named Satoshi Fuel / SFUEL. Always verify the mint address before using,
+                sending, swapping, or referencing SFUEL.
+              </p>
               <div className="token-list" style={{ marginTop: '1.5rem' }}>
                 {statusPoints.map((point) => (
                   <div key={point} className="token-item">
                     <span>{point}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="section sfuel-warning-section">
+            <div className="container">
+              <div className="panel sfuel-warning-panel">
+                <div>
+                  <div className="eyebrow">Duplicate SFUEL warning</div>
+                  <h2 className="section-title" style={{ marginTop: '1rem' }}>
+                    If your wallet shows two SFUEL tokens, use the official mint only.
+                  </h2>
+                  <p className="section-copy">
+                    The older SFUEL candidate has the same display name, but it does not match the official Satoshi Genesis SFUEL
+                    specification. Check the mint address, not just the token name or logo.
+                  </p>
+                </div>
+                <div className="sfuel-mint-grid">
+                  <div className="sfuel-mint-card sfuel-mint-official">
+                    <div className="brand-kicker">Official SFUEL</div>
+                    <strong>Use this mint</strong>
+                    <code>{SFUEL_MINT}</code>
+                    <span>2.1B supply target / 8 decimals</span>
+                    <a href={SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">
+                      View official mint on Solscan
+                    </a>
+                  </div>
+                  <div className="sfuel-mint-card sfuel-mint-rejected">
+                    <div className="brand-kicker">Rejected SFUEL</div>
+                    <strong>Do not use this mint</strong>
+                    <code>{REJECTED_SFUEL_MINT}</code>
+                    <span>Old candidate / wrong specification</span>
+                    <a href={REJECTED_SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">
+                      View rejected mint on Solscan
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
