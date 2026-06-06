@@ -4,10 +4,10 @@ import Link from 'next/link';
 const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const TOKEN_JSON_URL = '/token/sfuel.json';
 const TOKEN_LOGO_URL = '/token/sfuel-logo.png';
-const SFUEL_MINT = '3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH';
-const REJECTED_SFUEL_MINT = '6mNqWXFZfL7a16rt6TBn2gY8RwAk4bq28ZdW6csUoray';
+const SFUEL_MINT = '6mNqWXFZfL7a16rt6TBn2gY8RwAk4bq28ZdW6csUoray';
+const INACTIVE_SFUEL_MINT = '3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH';
 const SFUEL_SOLSCAN_URL = `https://solscan.io/token/${SFUEL_MINT}`;
-const REJECTED_SFUEL_SOLSCAN_URL = `https://solscan.io/token/${REJECTED_SFUEL_MINT}`;
+const INACTIVE_SFUEL_SOLSCAN_URL = `https://solscan.io/token/${INACTIVE_SFUEL_MINT}`;
 
 const utilityPoints = [
   'SGEN remains the core ecosystem asset for staking, governance, and long-term alignment.',
@@ -16,9 +16,9 @@ const utilityPoints = [
 ];
 
 const statusPoints = [
-  `Official SFUEL mint verified: ${SFUEL_MINT}`,
-  'Liquidity launch remains pending until a confirmed pool is published.',
-  'Rejected candidate mints must not be used for SFUEL trading, rewards, or metadata.',
+  `Active operational SFUEL mint: ${SFUEL_MINT}`,
+  'This is the SFUEL mint currently used for wallet balances, movement, and trading activity.',
+  'Other SFUEL-looking mints should not be used for current Satoshi Genesis SFUEL activity.',
 ];
 
 export const metadata: Metadata = {
@@ -100,7 +100,7 @@ export default function SFuelPage() {
                   </div>
                   <div className="panel metric">
                     <div className="metric-value">Mainnet</div>
-                    <div className="metric-label">Official mint verified</div>
+                    <div className="metric-label">Active mint selected</div>
                   </div>
                 </div>
               </div>
@@ -116,9 +116,9 @@ export default function SFuelPage() {
                 </div>
                 <div className="panel-soft token-hero">
                   <div className="brand-kicker" style={{ color: '#94a3b8' }}>Current status</div>
-                  <div className="token-title" style={{ marginTop: '0.75rem' }}>Official mint verified</div>
+                  <div className="token-title" style={{ marginTop: '0.75rem' }}>Active mint selected</div>
                   <p className="section-copy" style={{ marginTop: '0.75rem' }}>
-                    SFUEL has a verified Solana mainnet mint. Liquidity and trading details should only use confirmed official links.
+                    SFUEL currently points to the mint where wallet balances, movement, and trading activity already exist.
                   </p>
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function SFuelPage() {
           <section className="section">
             <div className="container">
               <div className="eyebrow">Launch status</div>
-              <h2 className="section-title">Official SFUEL mint verified. Liquidity remains pending.</h2>
+              <h2 className="section-title">Active SFUEL mint selected for current trading activity.</h2>
               <p className="section-copy">
                 Some wallets may show more than one token named Satoshi Fuel / SFUEL. Always verify the mint address before using,
                 sending, swapping, or referencing SFUEL.
@@ -168,31 +168,27 @@ export default function SFuelPage() {
                 <div>
                   <div className="eyebrow">Duplicate SFUEL warning</div>
                   <h2 className="section-title" style={{ marginTop: '1rem' }}>
-                    If your wallet shows two SFUEL tokens, use the official mint only.
+                    If your wallet shows two SFUEL tokens, use the active operational mint.
                   </h2>
                   <p className="section-copy">
-                    The older SFUEL candidate has the same display name, but it does not match the official Satoshi Genesis SFUEL
-                    specification. Check the mint address, not just the token name or logo.
+                    The active SFUEL mint is the one where the current wallet balances, movement, and trading work have already been done.
+                    Check the mint address, not just the token name or logo.
                   </p>
                 </div>
                 <div className="sfuel-mint-grid">
                   <div className="sfuel-mint-card sfuel-mint-official">
-                    <div className="brand-kicker">Official SFUEL</div>
+                    <div className="brand-kicker">Active SFUEL</div>
                     <strong>Use this mint</strong>
                     <code>{SFUEL_MINT}</code>
-                    <span>2.1B supply target / 8 decimals</span>
-                    <a href={SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">
-                      View official mint on Solscan
-                    </a>
+                    <span>Current trading and wallet activity / 1B supply / 6 decimals</span>
+                    <a href={SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">View active mint on Solscan</a>
                   </div>
                   <div className="sfuel-mint-card sfuel-mint-rejected">
-                    <div className="brand-kicker">Rejected SFUEL</div>
-                    <strong>Do not use this mint</strong>
-                    <code>{REJECTED_SFUEL_MINT}</code>
-                    <span>Old candidate / wrong specification</span>
-                    <a href={REJECTED_SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">
-                      View rejected mint on Solscan
-                    </a>
+                    <div className="brand-kicker">Inactive SFUEL</div>
+                    <strong>Do not use for current activity</strong>
+                    <code>{INACTIVE_SFUEL_MINT}</code>
+                    <span>Unused for current trading and wallet movement</span>
+                    <a href={INACTIVE_SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">View inactive mint on Solscan</a>
                   </div>
                 </div>
               </div>
@@ -206,10 +202,10 @@ export default function SFuelPage() {
                   <div>
                     <div className="eyebrow">Website assets</div>
                     <h2 className="section-title" style={{ marginTop: '1rem' }}>
-                      Official metadata and branding are ready.
+                      Active SFUEL metadata and branding are ready.
                     </h2>
                     <p className="section-copy">
-                      Use the verified SFUEL mint and hosted metadata only. Rejected candidate mints should not be used.
+                      Use the active SFUEL mint and hosted metadata only. Other SFUEL-looking mints should not be used for current activity.
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

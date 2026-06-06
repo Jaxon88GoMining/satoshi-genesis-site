@@ -866,7 +866,7 @@ export default function Page() {
                 </div>
                 <div className="stats-grid">
                   <Metric value="21M" label="Fixed SGEN supply" />
-                  <Metric value="2.1B" label="Programmed SFUEL emission ceiling" />
+                  <Metric value="1B" label="Active SFUEL mint supply" />
                   <Metric value="Solana" label="Live network" />
                 </div>
               </motion.div>
@@ -988,10 +988,10 @@ export default function Page() {
                 ticker="SFUEL"
                 role="Utility and reward token for participation, upgrades, burns, and ecosystem flow."
                 bullets={[
-                  'Programmed emission ceiling of 2,100,000,000',
+                  'Active mint supply of 1,000,000,000',
+                  '6-decimal Solana token used for current wallet and trading activity',
                   'Designed for earning, spending, and burn-linked circulation',
                   'Supports activity, access, upgrades, and reward mechanics',
-                  'Emissions reduce over time under controlled logic',
                 ]}
               />
             </div>
