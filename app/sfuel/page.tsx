@@ -145,19 +145,31 @@ export default function SFuelPage() {
           </section>
 
           <section className="section">
-            <div className="container">
-              <div className="eyebrow">Launch status</div>
-              <h2 className="section-title">Active SFUEL mint selected for current trading activity.</h2>
-              <p className="section-copy">
-                Some wallets may show more than one token named Satoshi Fuel / SFUEL. Always verify the mint address before using,
-                sending, swapping, or referencing SFUEL.
-              </p>
-              <div className="token-list" style={{ marginTop: '1.5rem' }}>
-                {statusPoints.map((point) => (
-                  <div key={point} className="token-item">
-                    <span>{point}</span>
-                  </div>
-                ))}
+            <div className="container sfuel-status-grid">
+              <div>
+                <div className="eyebrow">Launch status</div>
+                <h2 className="section-title">Active SFUEL mint selected for current trading activity.</h2>
+                <p className="section-copy">
+                  Some wallets may show more than one token named Satoshi Fuel / SFUEL. Always verify the mint address before using,
+                  sending, swapping, or referencing SFUEL.
+                </p>
+                <div className="token-list" style={{ marginTop: '1.5rem' }}>
+                  {statusPoints.map((point) => (
+                    <div key={point} className="token-item">
+                      <span>{point}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="panel sfuel-coin-card">
+                <img src={TOKEN_LOGO_URL} alt="Active SFUEL coin artwork" width="220" height="220" />
+                <div>
+                  <div className="brand-kicker">SGEN-aligned design</div>
+                  <div className="token-title">Satoshi Fuel</div>
+                  <p className="section-copy">
+                    Gold Satoshi Genesis styling with a small fuel accent for the utility layer.
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -167,7 +179,7 @@ export default function SFuelPage() {
               <div className="panel sfuel-warning-panel">
                 <div>
                   <div className="eyebrow">Duplicate SFUEL warning</div>
-                  <h2 className="section-title" style={{ marginTop: '1rem' }}>
+                  <h2 className="section-title sfuel-warning-title" style={{ marginTop: '1rem' }}>
                     If your wallet shows two SFUEL tokens, use the active operational mint.
                   </h2>
                   <p className="section-copy">

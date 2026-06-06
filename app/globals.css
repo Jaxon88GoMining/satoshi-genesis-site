@@ -472,6 +472,29 @@ button, input, select { font: inherit; }
 .token-item span {
   overflow-wrap: anywhere;
 }
+.sfuel-status-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.36fr);
+  gap: 1.25rem;
+  align-items: center;
+}
+.sfuel-coin-card {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  padding: 1.35rem;
+  text-align: center;
+  border-color: rgba(251,191,36,0.20);
+  background:
+    radial-gradient(circle at 50% 20%, rgba(251,191,36,0.16), transparent 42%),
+    rgba(2,6,23,0.48);
+}
+.sfuel-coin-card img {
+  width: min(100%, 220px);
+  height: auto;
+  border-radius: 9999px;
+  filter: drop-shadow(0 22px 42px rgba(251,191,36,0.18));
+}
 .sfuel-warning-section {
   padding-top: 0;
 }
@@ -526,6 +549,10 @@ button, input, select { font: inherit; }
 .sfuel-mint-rejected {
   border-color: rgba(248,113,113,0.34);
   box-shadow: inset 0 0 0 1px rgba(248,113,113,0.08);
+}
+.sfuel-warning-title {
+  font-size: clamp(1.8rem, 4.8vw, 3.1rem);
+  line-height: 1.02;
 }
 
 .holder-access-panel {
@@ -846,6 +873,7 @@ button, input, select { font: inherit; }
 @media (max-width: 1100px) {
   .feature-grid, .loop-grid, .onboarding-step-grid, .guide-grid, .safety-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .hero-grid, .cta-row, .token-grid, .card-grid, .holder-access-grid, .trade-sgen-grid, .footer-main, .market-feed-header { grid-template-columns: 1fr; display: grid; }
+  .sfuel-status-grid { grid-template-columns: 1fr; }
   .sfuel-warning-panel { grid-template-columns: 1fr; }
   .trust-strip { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .trust-mint { grid-column: 1 / -1; }
