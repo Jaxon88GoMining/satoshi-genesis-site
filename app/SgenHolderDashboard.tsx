@@ -1268,6 +1268,8 @@ export function SgenHolderDashboard() {
   const [accessState, setAccessState] = useState<HolderAccessState>('checking');
   const [walletAddress, setWalletAddress] = useState('');
   const [sgenBalance, setSgenBalance] = useState('0');
+  const [accessErrorMessage, setAccessErrorMessage] = useState('');
+  const [refreshNonce, setRefreshNonce] = useState(0);
   const [claimLedger, setClaimLedger] = useState<ClaimLedger>(() => createEmptyClaimLedger());
   const [claimMessage, setClaimMessage] = useState('');
   const [now, setNow] = useState(() => Date.now());
@@ -1301,12 +1303,14 @@ export function SgenHolderDashboard() {
         setAccessState('checking');
         setWalletAddress('');
         setSgenBalance('0');
+        setAccessErrorMessage('');
         return;
       }
 
       const walletBase58 = publicKey.toBase58();
       setAccessState('checking');
       setWalletAddress(walletBase58);
+      setAccessErrorMessage('');
 
       try {
         const result = await getSgenBalance(walletBase58);
@@ -1316,8 +1320,11 @@ export function SgenHolderDashboard() {
         setWalletAddress(result.wallet);
         setSgenBalance(result.balance);
         setAccessState(result.hasSgen ? 'granted' : 'denied');
-      } catch {
-        if (!cancelled) setAccessState('error');
+      } catch (error) {
+        if (!cancelled) {
+          setAccessState('error');
+          setAccessErrorMessage(error instanceof Error ? error.message : 'Unable to check SGEN balance.');
+        }
       }
     }
 
@@ -1326,7 +1333,7 @@ export function SgenHolderDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [connected, publicKey]);
+  }, [connected, publicKey, refreshNonce]);
 
   useEffect(() => {
     if (!walletAddress || accessState !== 'granted') {
@@ -1395,7 +1402,17 @@ export function SgenHolderDashboard() {
               <div className="brand-kicker">Holder Dashboard</div>
               <h2 className={styles.title}>Wallet overview</h2>
             </div>
-            <div className={pillClassName}>{statusLabel}</div>
+            <div className={styles.headerActions}>
+              <button
+                className={styles.retryButton}
+                type="button"
+                onClick={() => setRefreshNonce((value) => value + 1)}
+                disabled={accessState === 'checking'}
+              >
+                Re-check SGEN Balance
+              </button>
+              <div className={pillClassName}>{statusLabel}</div>
+            </div>
           </div>
 
           <div className={styles.grid}>
@@ -1496,7 +1513,43 @@ export function SgenHolderDashboard() {
                 </div>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className={styles.restrictedPanel}>
+              <div>
+                <div className="brand-kicker">Access Restricted</div>
+                <h3 className={styles.restrictedTitle}>SGEN required for access.</h3>
+                <p className={styles.restrictedCopy}>
+                  The Atlas Trading Bot is exclusively available to Satoshi Genesis holders. If you already hold SGEN in this wallet,
+                  re-check the balance after your wallet or token account finishes syncing.
+                </p>
+              </div>
+              <div className={styles.restrictedDetails}>
+                <div>
+                  <span>Connected wallet</span>
+                  <strong>{walletAddress || 'Waiting for wallet...'}</strong>
+                </div>
+                <div>
+                  <span>Official SGEN mint</span>
+                  <strong>{SGEN_MINT}</strong>
+                </div>
+                <div>
+                  <span>Detected SGEN balance</span>
+                  <strong>{accessState === 'checking' ? 'Checking...' : sgenBalance}</strong>
+                </div>
+                {accessState === 'error' ? (
+                  <p className={styles.restrictedError}>{accessErrorMessage || 'Wallet check failed. Please try again.'}</p>
+                ) : null}
+                <button
+                  className={styles.claimButton}
+                  type="button"
+                  onClick={() => setRefreshNonce((value) => value + 1)}
+                  disabled={accessState === 'checking'}
+                >
+                  {accessState === 'checking' ? 'Checking...' : 'Re-check SGEN Balance'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>,

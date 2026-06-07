@@ -18,6 +18,13 @@
   align-items: flex-start;
 }
 
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
 .title {
   margin: 0.55rem 0 0;
   font-size: 1.45rem;
@@ -43,6 +50,31 @@
 .pillDenied {
   border-color: rgba(248,113,113,0.30);
   color: #fca5a5;
+}
+
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(103,232,249,0.22);
+  border-radius: 9999px;
+  background: rgba(103,232,249,0.08);
+  color: #cffafe;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.8rem;
+}
+
+.retryButton:hover:not(:disabled) {
+  background: rgba(103,232,249,0.14);
+}
+
+.retryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .grid {
@@ -102,6 +134,65 @@
   margin-top: 1.5rem;
   border-top: 1px solid rgba(255,255,255,0.08);
   padding-top: 1.5rem;
+}
+
+.restrictedPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+  border: 1px solid rgba(248,113,113,0.22);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(248,113,113,0.10), rgba(251,191,36,0.06)),
+    rgba(2,6,23,0.48);
+  padding: 1.2rem;
+}
+
+.restrictedTitle {
+  color: #f8fafc;
+  font-size: 1.2rem;
+  line-height: 1.25;
+  margin: 0.55rem 0 0;
+}
+
+.restrictedCopy {
+  color: var(--soft);
+  line-height: 1.65;
+  margin: 0.75rem 0 0;
+}
+
+.restrictedDetails {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.restrictedDetails div {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  background: rgba(2,6,23,0.38);
+  padding: 0.85rem;
+}
+
+.restrictedDetails span {
+  display: block;
+  color: var(--soft);
+  font-size: 0.78rem;
+  margin-bottom: 0.45rem;
+}
+
+.restrictedDetails strong {
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.restrictedError {
+  border: 1px solid rgba(248,113,113,0.22);
+  border-radius: 14px;
+  color: #fca5a5;
+  line-height: 1.55;
+  margin: 0;
+  padding: 0.85rem;
 }
 
 .ledger {
@@ -637,7 +728,8 @@
   .botSafetyRules,
   .riskGrid,
   .botStats,
-  .ledgerGrid {
+  .ledgerGrid,
+  .restrictedPanel {
     grid-template-columns: 1fr;
   }
 }
@@ -649,6 +741,10 @@
 
   .header {
     flex-direction: column;
+  }
+
+  .headerActions {
+    justify-content: flex-start;
   }
 
   .ledgerHeader {
@@ -681,7 +777,8 @@
   }
 
   .claimButton,
-  .secondaryButton {
+  .secondaryButton,
+  .retryButton {
     width: 100%;
   }
 
