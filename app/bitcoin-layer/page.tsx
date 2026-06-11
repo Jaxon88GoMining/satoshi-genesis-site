@@ -321,7 +321,8 @@ export default function BitcoinLayerPage() {
             </div>
             <nav className="nav">
               <a href={HOME_URL} className="nav-link">Home</a>
-              <a href="/watchtower" className="nav-link" style={{ color: '#fde68a' }}>Bitcoin Layer</a>
+              <a href="/token-verification" className="nav-link">Verify Tokens</a>
+              <a href="/bitcoin-layer" className="nav-link" style={{ color: '#fde68a' }}>Bitcoin Layer</a>
               <a href="#access" className="nav-link">Access</a>
               <a href="#locked" className="nav-link">Locked Tools</a>
               <a href="#feed" className="nav-link">Demo Feed</a>

@@ -5,9 +5,7 @@ const WHITEPAPER_URL = '/downloads/whitepaper.pdf';
 const TOKEN_JSON_URL = '/token/sfuel.json';
 const TOKEN_LOGO_URL = '/token/sfuel-logo-v3.png';
 const SFUEL_MINT = '3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH';
-const LEGACY_SFUEL_MINT = '6mNqWXFZfL7a16rt6TBn2gY8RwAk4bq28ZdW6csUoray';
 const SFUEL_SOLSCAN_URL = `https://solscan.io/token/${SFUEL_MINT}`;
-const LEGACY_SFUEL_SOLSCAN_URL = `https://solscan.io/token/${LEGACY_SFUEL_MINT}`;
 
 const utilityPoints = [
   'SGEN remains the core ecosystem asset for staking, governance, and long-term alignment.',
@@ -18,7 +16,7 @@ const utilityPoints = [
 const statusPoints = [
   `Official SFUEL mint: ${SFUEL_MINT}`,
   'This is the whitepaper-aligned 2.1B SFUEL mint used as the public source of truth.',
-  'Legacy SFUEL-looking mints should not be used for future Satoshi Genesis SFUEL activity.',
+  'Always verify the official mint before using, sending, swapping, or referencing SFUEL.',
 ];
 
 export const metadata: Metadata = {
@@ -53,6 +51,7 @@ export default function SFuelPage() {
             </div>
             <nav className="nav">
               <Link href="/" className="nav-link">Home</Link>
+              <Link href="/token-verification" className="nav-link">Verify Tokens</Link>
               <Link href="/#tokens" className="nav-link">Token Architecture</Link>
               <Link href="/#tokenomics" className="nav-link">Tokenomics</Link>
               <a href={WHITEPAPER_URL} className="button button-outline" target="_blank" rel="noreferrer">
@@ -178,13 +177,13 @@ export default function SFuelPage() {
             <div className="container">
               <div className="panel sfuel-warning-panel">
                 <div>
-                  <div className="eyebrow">Duplicate SFUEL warning</div>
+                  <div className="eyebrow">Official SFUEL status</div>
                   <h2 className="section-title sfuel-warning-title" style={{ marginTop: '1rem' }}>
-                    If your wallet shows two SFUEL tokens, use the official 2.1B mint.
+                    Use the official 2.1B SFUEL mint only.
                   </h2>
                   <p className="section-copy">
-                    The 1B SFUEL mint is a legacy early-activity token. The official Satoshi Genesis SFUEL source of truth is the
-                    whitepaper-aligned 2.1B mint. Check the mint address, not just the token name or logo.
+                    The official Satoshi Genesis SFUEL source of truth is the whitepaper-aligned 2.1B mint.
+                    Check the mint address, not just the token name or logo.
                   </p>
                 </div>
                 <div className="sfuel-mint-grid">
@@ -194,13 +193,6 @@ export default function SFuelPage() {
                     <code>{SFUEL_MINT}</code>
                     <span>Whitepaper-aligned 2.1B supply / 8 decimals</span>
                     <a href={SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">View official mint on Solscan</a>
-                  </div>
-                  <div className="sfuel-mint-card sfuel-mint-rejected">
-                    <div className="brand-kicker">Legacy SFUEL</div>
-                    <strong>Do not use for future activity</strong>
-                    <code>{LEGACY_SFUEL_MINT}</code>
-                    <span>Early 1B mint / 6 decimals / not the whitepaper source of truth</span>
-                    <a href={LEGACY_SFUEL_SOLSCAN_URL} target="_blank" rel="noreferrer">View legacy mint on Solscan</a>
                   </div>
                 </div>
               </div>
@@ -217,7 +209,7 @@ export default function SFuelPage() {
                       Official SFUEL metadata and branding are ready.
                     </h2>
                     <p className="section-copy">
-                      Use the official SFUEL mint and hosted metadata only. Legacy SFUEL-looking mints should not be used for future activity.
+                      Use the official SFUEL mint and hosted metadata as the single source of truth for future activity.
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

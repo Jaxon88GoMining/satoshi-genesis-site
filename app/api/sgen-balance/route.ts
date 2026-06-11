@@ -40,6 +40,15 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unknown RPC error';
 }
 
+function getEndpointLabel(endpoint: string, index: number) {
+  try {
+    const url = new URL(endpoint);
+    return `RPC endpoint ${index + 1} (${url.hostname})`;
+  } catch {
+    return `RPC endpoint ${index + 1}`;
+  }
+}
+
 function getMintDecimals(data: Uint8Array) {
   return data.length > 44 ? data[44] : FALLBACK_DECIMALS;
 }
@@ -106,7 +115,7 @@ async function getSgenRawBalance(owner: PublicKey) {
     let pending = RPC_ENDPOINTS.length;
     let resolved = false;
 
-    for (const endpoint of RPC_ENDPOINTS) {
+    for (const [index, endpoint] of RPC_ENDPOINTS.entries()) {
       withTimeout(getSgenRawBalanceFromEndpoint(endpoint, owner), endpoint)
         .then((result) => {
           if (resolved) return;
@@ -114,7 +123,7 @@ async function getSgenRawBalance(owner: PublicKey) {
           resolve(result);
         })
         .catch((error) => {
-          errors.push(`${endpoint}: ${getErrorMessage(error)}`);
+          errors.push(`${getEndpointLabel(endpoint, index)}: ${getErrorMessage(error)}`);
           pending -= 1;
 
           if (!resolved && pending === 0) {

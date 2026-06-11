@@ -25,6 +25,7 @@ const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const JUPITER_PRICE_API_URL = 'https://lite-api.jup.ag/price/v3';
 const JUPITER_PLUGIN_SCRIPT_URL = 'https://plugin.jup.ag/plugin-v1.js';
 const JUPITER_PLUGIN_TARGET_ID = 'jupiter-sgen-plugin';
+const JUPITER_FALLBACK_SWAP_URL = `https://jup.ag/swap/SOL-${SGEN_MINT}`;
 
 declare global {
   interface Window {
@@ -34,6 +35,15 @@ declare global {
     __sgenJupiterPluginLoading?: Promise<void>;
   }
 }
+
+type NavigatorWithWallets = Navigator & {
+  wallets?: unknown;
+};
+
+type JupiterWalletArray = unknown[] & {
+  get?: () => unknown[];
+  register?: (...wallets: unknown[]) => void;
+};
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -469,7 +479,106 @@ async function getSgenBalance(walletAddress: string) {
   return data as SgenBalanceResponse;
 }
 
+function createJupiterWalletArray(currentWallets: unknown): JupiterWalletArray {
+  const walletArray: JupiterWalletArray = [];
+  const currentRegistry =
+    currentWallets && typeof currentWallets === 'object'
+      ? (currentWallets as { get?: () => unknown[]; register?: (...wallets: unknown[]) => void })
+      : null;
+
+  const addWallets = (wallets: unknown[]) => {
+    wallets.forEach((wallet) => {
+      if (wallet && !walletArray.includes(wallet)) walletArray.push(wallet);
+    });
+  };
+
+  if (Array.isArray(currentWallets)) {
+    addWallets(currentWallets);
+  } else if (currentRegistry?.get) {
+    try {
+      const registeredWallets = currentRegistry.get.call(currentRegistry);
+      if (Array.isArray(registeredWallets)) addWallets(registeredWallets);
+    } catch {
+      // Some wallet-standard registries throw until extensions are fully ready.
+    }
+  }
+
+  Object.defineProperty(walletArray, 'get', {
+    configurable: true,
+    value: () => {
+      if (currentRegistry?.get) {
+        try {
+          const registeredWallets = currentRegistry.get.call(currentRegistry);
+          return Array.isArray(registeredWallets) ? registeredWallets : walletArray;
+        } catch {
+          return walletArray;
+        }
+      }
+
+      return walletArray;
+    },
+  });
+
+  Object.defineProperty(walletArray, 'register', {
+    configurable: true,
+    value: (...wallets: unknown[]) => {
+      if (currentRegistry?.register) {
+        try {
+          currentRegistry.register.call(currentRegistry, ...wallets);
+        } catch {
+          // Keep Jupiter's compatibility array usable even if an extension registry rejects.
+        }
+      }
+
+      addWallets(wallets);
+    },
+  });
+
+  return walletArray;
+}
+
+function ensureJupiterNavigatorWalletArray() {
+  if (typeof window === 'undefined' || !window.navigator) return false;
+
+  const navigatorWithWallets = window.navigator as NavigatorWithWallets;
+  if (Array.isArray(navigatorWithWallets.wallets)) return true;
+
+  const walletArray = createJupiterWalletArray(navigatorWithWallets.wallets);
+
+  try {
+    Object.defineProperty(navigatorWithWallets, 'wallets', {
+      configurable: true,
+      writable: true,
+      value: walletArray,
+    });
+  } catch {
+    try {
+      navigatorWithWallets.wallets = walletArray;
+    } catch {
+      try {
+        const navigatorPrototype = Object.getPrototypeOf(navigatorWithWallets);
+        if (navigatorPrototype) {
+          Object.defineProperty(navigatorPrototype, 'wallets', {
+            configurable: true,
+            get: () => walletArray,
+          });
+        }
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  return Array.isArray(navigatorWithWallets.wallets);
+}
+
 function loadJupiterPlugin() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return Promise.reject(new Error('Jupiter Plugin can only load in the browser.'));
+  }
+
+  ensureJupiterNavigatorWalletArray();
+
   if (window.Jupiter) return Promise.resolve();
   if (window.__sgenJupiterPluginLoading) return window.__sgenJupiterPluginLoading;
 
@@ -487,7 +596,10 @@ function loadJupiterPlugin() {
     script.async = true;
     script.defer = true;
     script.dataset.preload = 'true';
-    script.onload = () => resolve();
+    script.onload = () => {
+      ensureJupiterNavigatorWalletArray();
+      resolve();
+    };
     script.onerror = () => reject(new Error('Jupiter Plugin failed to load.'));
     document.head.appendChild(script);
   });
@@ -504,9 +616,14 @@ function JupiterSwapWidget() {
 
     async function initialisePlugin() {
       try {
+        ensureJupiterNavigatorWalletArray();
         await loadJupiterPlugin();
 
-        if (cancelled || !window.Jupiter || initializedRef.current) return;
+        if (cancelled || initializedRef.current) return;
+
+        if (!ensureJupiterNavigatorWalletArray() || !window.Jupiter || typeof window.Jupiter.init !== 'function') {
+          throw new Error('Jupiter Plugin is unavailable.');
+        }
 
         const target = document.getElementById(JUPITER_PLUGIN_TARGET_ID);
         if (target) target.innerHTML = '';
@@ -545,7 +662,15 @@ function JupiterSwapWidget() {
       <div id={JUPITER_PLUGIN_TARGET_ID} className="jupiter-widget-target" />
       {pluginState === 'loading' ? <div className="jupiter-widget-status">Loading Jupiter swap...</div> : null}
       {pluginState === 'error' ? (
-        <div className="jupiter-widget-status">Jupiter swap could not load. Refresh the page and try again.</div>
+        <div className="jupiter-widget-status jupiter-widget-status-error">
+          <div className="jupiter-widget-fallback">
+            <strong>Jupiter swap could not load in this browser.</strong>
+            <span>Open Jupiter directly to trade SOL into the official SGEN mint.</span>
+            <a className="button button-gold" href={JUPITER_FALLBACK_SWAP_URL} target="_blank" rel="noreferrer">
+              Open Jupiter Swap
+            </a>
+          </div>
+        </div>
       ) : null}
     </div>
   );
@@ -825,6 +950,7 @@ export default function Page() {
             </div>
             <nav className="nav">
               <a href="#tokens" className="nav-link">Tokens</a>
+              <a href="/token-verification" className="nav-link">Verify Tokens</a>
               <a href="#how-it-works" className="nav-link">How It Works</a>
               <a href="#holder-access" className="nav-link">Holder Access</a>
               <a href="#live-market-feed" className="nav-link">Market Feed</a>
@@ -832,7 +958,7 @@ export default function Page() {
               <a href="#value-loop" className="nav-link">Value Loop</a>
               <a href="#liquidity" className="nav-link">Liquidity</a>
               <a href="#roadmap" className="nav-link">Roadmap</a>
-              <a href="/watchtower" className="nav-link">Bitcoin Layer</a>
+              <a href="/bitcoin-layer" className="nav-link">Bitcoin Layer</a>
               <ButtonLink href={WHITEPAPER_URL} target="_blank">Read Whitepaper</ButtonLink>
             </nav>
           </div>
@@ -960,7 +1086,7 @@ export default function Page() {
                   </p>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <ButtonLink href="/watchtower" variant="gold">Explore Bitcoin Layer</ButtonLink>
+                  <ButtonLink href="/bitcoin-layer" variant="gold">Explore Bitcoin Layer</ButtonLink>
                 </div>
               </div>
             </motion.div>
@@ -1211,6 +1337,7 @@ export default function Page() {
         <footer style={{ borderTop: '1px solid rgba(255,255,255,0.10)', background: 'rgba(0,0,0,0.20)' }}>
           <div className="container footer-links">
             <TradeJupiterButton variant="outline">Trade on Jupiter</TradeJupiterButton>
+            <ButtonLink href="/token-verification" variant="outline">Token Verification</ButtonLink>
             <ButtonLink href={WHITEPAPER_URL} target="_blank" variant="outline">Whitepaper PDF</ButtonLink>
             <ButtonLink href={SGEN_EXPLORER_URL} target="_blank" variant="outline">Token Mint Explorer</ButtonLink>
             <ButtonLink href={DECK_URL} target="_blank" variant="outline">Pitch Deck</ButtonLink>
@@ -1218,6 +1345,7 @@ export default function Page() {
           </div>
           <div className="container footer-quick-links">
             <div className="quick-link-label">Quick Links</div>
+            <ButtonLink href="/token-verification" variant="outline">Token Verification</ButtonLink>
             <ButtonLink href={WHITEPAPER_URL} target="_blank" variant="outline">Whitepaper</ButtonLink>
             <ButtonLink href={SGEN_EXPLORER_URL} target="_blank" variant="outline">Token Mint Explorer</ButtonLink>
             <span className="placeholder-link">GitHub placeholder</span>

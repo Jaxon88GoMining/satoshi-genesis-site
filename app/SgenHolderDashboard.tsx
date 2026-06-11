@@ -6,6 +6,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import styles from './SgenHolderDashboard.module.css';
 
 const SGEN_MINT = 'DLftpBQXTvKgBAtqHbkk8sKtvCsT5WR7Ws3ULdFvjmyF';
+const SFUEL_MINT = '3fgR23jdmbWMHsLsE7xn8WNEVRRhxcSLe4Hztgy3yArH';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const JUPITER_PRICE_API_URL = 'https://lite-api.jup.ag/price/v3';
@@ -40,6 +41,7 @@ type BotStrategy = 'Buy the Dip' | 'Take Profit' | 'Dollar-Cost Average' | 'Mome
 type BotStatus = 'idle' | 'running' | 'paused';
 type TradeAction = 'Buy' | 'Sell';
 type SignalAction = 'BUY' | 'SELL' | 'HOLD';
+type AtlasCommandStatus = 'ready' | 'inProgress' | 'manual' | 'planned';
 
 type PaperTrade = {
   action: TradeAction;
@@ -147,6 +149,18 @@ const ATLAS_DEFAULT_RISK_SETTINGS: RiskSettings = {
 };
 const ATLAS_SAFETY_BLOCKED_MESSAGE = 'Signal blocked by safety settings';
 const ATLAS_SIGNAL_DEDUPE_WINDOW_MS = 3000;
+const ATLAS_COMMAND_METRICS = [
+  { label: 'SGEN access layer', value: 'Holder-gated', detail: 'Wallet balance check against the official SGEN mint.' },
+  { label: 'SFUEL rewards', value: 'Ledger ready', detail: 'Local reward claims prepare holder distribution logic.' },
+  { label: 'Atlas mode', value: 'Signals first', detail: 'Simulation and live-signal modes stay manual approval only.' },
+];
+const ATLAS_COMMAND_CHECKLIST: Array<{ label: string; status: AtlasCommandStatus; note: string }> = [
+  { label: 'Official SGEN source of truth', status: 'ready', note: 'Mint address is locked into holder access and Jupiter defaults.' },
+  { label: 'Official SFUEL source of truth', status: 'ready', note: '2.1B SFUEL mint and metadata are published in the app.' },
+  { label: 'Raydium/Jupiter route watch', status: 'inProgress', note: 'Track whether routing is available before promoting public trading.' },
+  { label: 'SFUEL distribution runbook', status: 'manual', note: 'Claims remain simulated until a wallet-approved distribution flow is approved.' },
+  { label: 'Atlas strategy controls', status: 'planned', note: 'Keep expanding risk settings before any future controlled trading tool.' },
+];
 
 async function getSgenBalance(walletAddress: string) {
   const response = await fetch(`/api/sgen-balance?wallet=${encodeURIComponent(walletAddress)}`, {
@@ -717,6 +731,136 @@ function formatTradeDate(value: string) {
 
 function getAtlasModeLabel(mode: AtlasMode) {
   return mode === 'liveSignal' ? 'Live Signal Mode' : 'Simulation Mode';
+}
+
+function getCommandStatusLabel(status: AtlasCommandStatus) {
+  if (status === 'ready') return 'Ready';
+  if (status === 'inProgress') return 'In progress';
+  if (status === 'manual') return 'Manual review';
+  return 'Planned';
+}
+
+function getCommandStatusClassName(status: AtlasCommandStatus) {
+  return [
+    styles.commandStatus,
+    status === 'ready' ? styles.commandReady : '',
+    status === 'inProgress' ? styles.commandInProgress : '',
+    status === 'manual' ? styles.commandManual : '',
+    status === 'planned' ? styles.commandPlanned : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function AtlasCommandCentre({
+  claimLedger,
+  holderTier,
+  sgenBalance,
+}: {
+  claimLedger: ClaimLedger;
+  holderTier: HolderTier;
+  sgenBalance: string;
+}) {
+  const commandBrief = [
+    'Project: SGEN/SFUEL Atlas Command Centre',
+    `SGEN mint: ${SGEN_MINT}`,
+    `SFUEL mint: ${SFUEL_MINT}`,
+    `Detected SGEN balance: ${sgenBalance}`,
+    `Holder tier: ${holderTier.name}`,
+    `Simulated SFUEL ledger balance: ${claimLedger.sfuelRewardsBalance} SFUEL`,
+    'Task: Review launch readiness, SFUEL reward flow, liquidity route status, and Atlas signal safety.',
+    'Rules: Do not auto-trade, do not custody funds, do not ask for seed phrases, and keep all swaps wallet-approved.',
+  ].join('\n');
+
+  return (
+    <div className={styles.commandCentre}>
+      <div className={styles.commandHero}>
+        <div>
+          <div className="brand-kicker">Atlas Command Centre</div>
+          <h3 className={styles.commandTitle}>SGEN/SFUEL mission control</h3>
+          <p>
+            A holder-only command layer for checking token source-of-truth details, launch readiness, reward flow, and Atlas signal safety.
+          </p>
+        </div>
+        <div className={styles.commandTier}>
+          <span>Active holder tier</span>
+          <strong>{holderTier.name}</strong>
+          <small>{holderTier.claimAmount} SFUEL daily claim path</small>
+        </div>
+      </div>
+
+      <div className={styles.commandMetrics}>
+        {ATLAS_COMMAND_METRICS.map((metric) => (
+          <div key={metric.label} className={styles.commandMetric}>
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+            <small>{metric.detail}</small>
+          </div>
+        ))}
+      </div>
+
+      <div className={styles.commandGrid}>
+        <div className={styles.commandPanel}>
+          <div className="brand-kicker">Source of truth</div>
+          <div className={styles.commandTokenRows}>
+            <div>
+              <span>Official SGEN mint</span>
+              <code>{SGEN_MINT}</code>
+            </div>
+            <div>
+              <span>Official SFUEL mint</span>
+              <code>{SFUEL_MINT}</code>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.commandPanel}>
+          <div className="brand-kicker">SFUEL rewards planner</div>
+          <div className={styles.commandRewardRows}>
+            <div>
+              <span>Ledger balance</span>
+              <strong>{claimLedger.sfuelRewardsBalance} SFUEL</strong>
+            </div>
+            <div>
+              <span>Total claims</span>
+              <strong>{claimLedger.totalClaims}</strong>
+            </div>
+            <div>
+              <span>Daily claim path</span>
+              <strong>{holderTier.claimAmount} SFUEL</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.commandChecklist}>
+        <div className={styles.commandChecklistHeader}>
+          <div>
+            <div className="brand-kicker">Launch checklist</div>
+            <h4>What Atlas should watch next</h4>
+          </div>
+          <span>Manual approval system</span>
+        </div>
+        {ATLAS_COMMAND_CHECKLIST.map((item) => (
+          <div key={item.label} className={styles.commandChecklistItem}>
+            <div>
+              <strong>{item.label}</strong>
+              <p>{item.note}</p>
+            </div>
+            <span className={getCommandStatusClassName(item.status)}>{getCommandStatusLabel(item.status)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className={styles.commandBrief}>
+        <div>
+          <div className="brand-kicker">Copy-ready Codex brief</div>
+          <p>Use this when you want Atlas to generate the next dev task around SGEN, SFUEL, liquidity, or signal safety.</p>
+        </div>
+        <pre>{commandBrief}</pre>
+      </div>
+    </div>
+  );
 }
 
 function AtlasTradingBot({ walletAddress }: { walletAddress: string }) {
@@ -1500,6 +1644,7 @@ export function SgenHolderDashboard() {
                   {claimMessage ? <div className={styles.claimMessage}>{claimMessage}</div> : null}
                 </div>
               </div>
+              <AtlasCommandCentre claimLedger={claimLedger} holderTier={holderTier} sgenBalance={sgenBalance} />
               <AtlasTradingBot walletAddress={walletAddress} />
               <div className={styles.grid}>
                 <div className={styles.zoneCard}>

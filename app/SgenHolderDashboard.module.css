@@ -302,6 +302,223 @@
   font-weight: 700;
 }
 
+.commandCentre {
+  margin-top: 1.35rem;
+  border: 1px solid rgba(251,191,36,0.18);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(251,191,36,0.14), transparent 34rem),
+    linear-gradient(135deg, rgba(251,191,36,0.08), rgba(103,232,249,0.055)),
+    rgba(2,6,23,0.54);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+  padding: 1.15rem;
+}
+
+.commandHero,
+.commandGrid,
+.commandMetrics {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.commandHero {
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.32fr);
+  align-items: stretch;
+}
+
+.commandHero p,
+.commandBrief p {
+  color: var(--soft);
+  line-height: 1.6;
+  margin: 0.65rem 0 0;
+}
+
+.commandTitle {
+  color: #f8fafc;
+  font-size: 1.18rem;
+  line-height: 1.25;
+  margin: 0.45rem 0 0;
+}
+
+.commandTier,
+.commandMetric,
+.commandPanel,
+.commandChecklist,
+.commandBrief {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.045);
+  padding: 1rem;
+}
+
+.commandTier {
+  background: linear-gradient(135deg, rgba(251,191,36,0.13), rgba(103,232,249,0.06));
+}
+
+.commandTier span,
+.commandMetric span,
+.commandTokenRows span,
+.commandRewardRows span {
+  display: block;
+  color: var(--soft);
+  font-size: 0.78rem;
+  margin-bottom: 0.45rem;
+}
+
+.commandTier strong,
+.commandMetric strong,
+.commandRewardRows strong {
+  color: #fef3c7;
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.commandTier small,
+.commandMetric small {
+  color: var(--soft);
+  display: block;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  margin-top: 0.45rem;
+}
+
+.commandMetrics {
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  margin-top: 0.9rem;
+}
+
+.commandGrid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  margin-top: 0.9rem;
+}
+
+.commandTokenRows,
+.commandRewardRows {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.commandTokenRows div,
+.commandRewardRows div {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  background: rgba(2,6,23,0.38);
+  padding: 0.85rem;
+}
+
+.commandTokenRows code {
+  color: #cffafe;
+  display: block;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.commandChecklist,
+.commandBrief {
+  margin-top: 0.9rem;
+}
+
+.commandChecklistHeader,
+.commandChecklistItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.commandChecklistHeader {
+  margin-bottom: 0.75rem;
+}
+
+.commandChecklistHeader h4 {
+  color: #f8fafc;
+  font-size: 1rem;
+  margin: 0.4rem 0 0;
+}
+
+.commandChecklistHeader > span {
+  border: 1px solid rgba(103,232,249,0.18);
+  border-radius: 9999px;
+  color: #cffafe;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.45rem 0.65rem;
+  white-space: nowrap;
+}
+
+.commandChecklistItem {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 0.85rem 0;
+}
+
+.commandChecklistItem:last-child {
+  padding-bottom: 0;
+}
+
+.commandChecklistItem strong {
+  color: #e2e8f0;
+}
+
+.commandChecklistItem p {
+  color: var(--soft);
+  line-height: 1.5;
+  margin: 0.35rem 0 0;
+}
+
+.commandStatus {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 9999px;
+  flex: 0 0 auto;
+  font-size: 0.74rem;
+  font-weight: 900;
+  padding: 0.42rem 0.62rem;
+  white-space: nowrap;
+}
+
+.commandReady {
+  background: rgba(74,222,128,0.10);
+  border-color: rgba(74,222,128,0.22);
+  color: #86efac;
+}
+
+.commandInProgress {
+  background: rgba(103,232,249,0.10);
+  border-color: rgba(103,232,249,0.22);
+  color: #cffafe;
+}
+
+.commandManual {
+  background: rgba(251,191,36,0.10);
+  border-color: rgba(251,191,36,0.24);
+  color: #fde68a;
+}
+
+.commandPlanned {
+  background: rgba(148,163,184,0.10);
+  border-color: rgba(148,163,184,0.20);
+  color: #cbd5e1;
+}
+
+.commandBrief {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 1rem;
+}
+
+.commandBrief pre {
+  border: 1px solid rgba(103,232,249,0.14);
+  border-radius: 12px;
+  background: rgba(2,6,23,0.62);
+  color: #dbeafe;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0;
+  overflow-x: auto;
+  padding: 0.9rem;
+  white-space: pre-wrap;
+}
+
 .bot {
   margin-top: 1.35rem;
   border: 1px solid rgba(103,232,249,0.16);
@@ -721,6 +938,10 @@
   .tierGrid,
   .priceFeed,
   .priceGrid,
+  .commandHero,
+  .commandGrid,
+  .commandMetrics,
+  .commandBrief,
   .signalPanel,
   .modePanel,
   .liveApprovalPanel,
